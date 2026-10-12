@@ -1,0 +1,6 @@
+[submodule "apps/frontend"]
+	path = apps/frontend
+	url = git@github.com:Little-Elsewhere/dreamday-frontend.git
+[submodule "apps/backend"]
+	path = apps/backend
+	url = git@github.com:Little-Elsewhere/dreamday-backend.git
