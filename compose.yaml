@@ -5,7 +5,7 @@ services:
       context: ./apps/frontend
       dockerfile: docker/dev/Dockerfile
     env_file:
-      - ./apps/frontend/.env
+      - ./env/frontend/.env
     ports:
       - "4000:4000"
     networks:
@@ -17,7 +17,7 @@ services:
       context: ./apps/backend
       dockerfile: docker/dev/Dockerfile
     env_file:
-      - ./apps/backend/.env
+      - ./env/backend/.env
     ports:
       - "8000:8000"
     networks:

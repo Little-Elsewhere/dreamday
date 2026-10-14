@@ -9,6 +9,9 @@ This repository coordinates the frontend and backend Git submodules and runs the
 ├── apps/
 │   ├── frontend/                 # Git submodule
 │   └── backend/                  # Git submodule
+├── env/
+│   ├── frontend/.env.example
+│   └── backend/.env.example
 ├── compose.yaml                 # Local Docker Compose stack
 ├── scripts/
 │   ├── build.sh
@@ -23,9 +26,10 @@ Each submodule is pinned to a commit recorded by this repository. Updating a sub
 
 - Git access to both submodule repositories.
 - Docker Engine and Docker Compose v2.
-- Existing `apps/frontend/.env` and `apps/backend/.env` files.
+- Local env files copied from `env/frontend/.env.example` and
+  `env/backend/.env.example`.
 
-The env files belong to their respective projects. Compose loads them using `env_file`; this repository does not create them or duplicate their application variables. Variables needed while building an image must also be made available by that project's Dockerfile/build process, because Compose `env_file` supplies variables at container runtime.
+Compose loads per-service variables from these files using `env_file`. Variables needed while building an image must also be made available by that project's Dockerfile/build process, because Compose `env_file` supplies variables at container runtime.
 
 ## Clone and update submodules
 
@@ -95,14 +99,22 @@ These commands build and run containers on the current Docker host. They do not 
 
 | Service | Env file | Compose file |
 | --- | --- | --- |
-| Frontend | `apps/frontend/.env` | `compose.yaml` |
-| Backend | `apps/backend/.env` | `compose.yaml` |
+| Frontend | `env/frontend/.env` | `compose.yaml` |
+| Backend | `env/backend/.env` | `compose.yaml` |
 
-Keep application settings in each subproject. Do not add a root `.env` file for this infrastructure repository.
+Create the local files from their examples before starting Compose:
+
+```sh
+cp env/frontend/.env.example env/frontend/.env
+cp env/backend/.env.example env/backend/.env
+```
+
+Compose loads each service's variables with `env_file`; keep service environment
+values in these files instead of adding an `environment` section to Compose.
 
 ## Troubleshooting
 
 - **Submodule directory is empty:** run `git submodule update --init --recursive` and confirm Git can access both repositories.
-- **Compose reports a missing env file:** ensure the submodule is initialized and its root `.env` exists at the path listed above.
+- **Compose reports a missing env file:** copy the matching `.env.example` to `.env` under the `env` directory.
 - **Compose cannot find a Dockerfile:** check the Dockerfile path inside the submodule and update the service's `dockerfile:` setting.
 - **A service cannot reach the other:** use its Compose service name and the port the application listens on inside the container; host `localhost` addresses are for clients outside the Docker network.
