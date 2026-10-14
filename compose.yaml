@@ -6,10 +6,23 @@ services:
       dockerfile: docker/dev/Dockerfile
     env_file:
       - ./env/frontend/.env
+    secrets:
+      - source: frontend_doppler_token
+        target: doppler_token
     ports:
       - "4000:4000"
     networks:
       - dreamday-local
+    volumes:
+      - type: bind
+        source: ./apps/frontend
+        target: /app
+      - type: volume
+        source: frontend_node_modules
+        target: /app/node_modules
+      - type: volume
+        source: frontend_next
+        target: /app/.next
 
   backend:
     image: dreamday-backend:local
@@ -26,3 +39,11 @@ services:
 networks:
   dreamday-local:
     driver: bridge
+
+volumes:
+  frontend_node_modules:
+  frontend_next:
+
+secrets:
+  frontend_doppler_token:
+    file: ./env/frontend/doppler_token

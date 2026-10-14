@@ -1,2 +1,4 @@
+/env/frontend/doppler_token
+/env/backend/doppler_token
 /env/frontend/.env
 /env/backend/.env

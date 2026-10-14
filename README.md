@@ -27,7 +27,8 @@ Each submodule is pinned to a commit recorded by this repository. Updating a sub
 - Git access to both submodule repositories.
 - Docker Engine and Docker Compose v2.
 - Local env files copied from `env/frontend/.env.example` and
-  `env/backend/.env.example`.
+  `env/backend/.env.example`, plus a local Doppler token file copied from
+  `env/frontend/doppler_token.example`.
 
 Compose loads per-service variables from these files using `env_file`. Variables needed while building an image must also be made available by that project's Dockerfile/build process, because Compose `env_file` supplies variables at container runtime.
 
@@ -101,12 +102,26 @@ These commands build and run containers on the current Docker host. They do not 
 | --- | --- | --- |
 | Frontend | `env/frontend/.env` | `compose.yaml` |
 | Backend | `env/backend/.env` | `compose.yaml` |
+| Frontend Compose secret | `env/frontend/doppler_token` | `compose.yaml` |
+| Backend Doppler token | `env/backend/doppler_token` | Added to Compose when backend Doppler is enabled |
 
-Create the local files from their examples before starting Compose:
+Create the local files from their examples before starting Compose. Replace the
+contents of `env/frontend/doppler_token` with the frontend's read-only Doppler
+service token. Git ignores the local token files. Compose mounts the frontend
+token as `/run/secrets/doppler_token`. The backend token is kept separately at
+`env/backend/doppler_token`; it will be mounted only when the backend image is
+configured to load its environment from Doppler.
 
 ```sh
 cp env/frontend/.env.example env/frontend/.env
 cp env/backend/.env.example env/backend/.env
+cp env/frontend/doppler_token.example env/frontend/doppler_token
+```
+
+When enabling Doppler for the backend, create its separate token file:
+
+```sh
+cp env/backend/doppler_token.example env/backend/doppler_token
 ```
 
 Compose loads each service's variables with `env_file`; keep service environment
