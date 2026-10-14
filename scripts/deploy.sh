@@ -15,10 +15,12 @@ fi
 
 case "$1" in
   frontend|backend)
-    SERVICES=("$1")
+    BUILD_SERVICES=("$1")
+    START_SERVICES=("$1")
     ;;
   all)
-    SERVICES=(frontend backend)
+    BUILD_SERVICES=(frontend backend)
+    START_SERVICES=(frontend backend nginx)
     ;;
   *)
     usage
@@ -26,5 +28,5 @@ case "$1" in
     ;;
 esac
 
-docker compose --project-directory "$ROOT_DIR" -f "$COMPOSE_FILE" build --no-cache "${SERVICES[@]}"
-docker compose --project-directory "$ROOT_DIR" -f "$COMPOSE_FILE" up -d --no-build "${SERVICES[@]}"
+docker compose --project-directory "$ROOT_DIR" -f "$COMPOSE_FILE" build --no-cache "${BUILD_SERVICES[@]}"
+docker compose --project-directory "$ROOT_DIR" -f "$COMPOSE_FILE" up -d --no-build "${START_SERVICES[@]}"

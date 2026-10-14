@@ -36,6 +36,20 @@ services:
     networks:
       - dreamday-local
 
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      - frontend
+      - backend
+    ports:
+      - "127.0.0.1:80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/proxy-headers.conf:/etc/nginx/proxy-headers.conf:ro
+    networks:
+      - dreamday-local
+
 networks:
   dreamday-local:
     driver: bridge
