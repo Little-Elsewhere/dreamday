@@ -84,7 +84,30 @@ Start and manage the stack:
 ./scripts/dev.sh down
 ```
 
-The frontend is available at `http://localhost:4000` and the backend at `http://localhost:8000`. Both services share a local Docker network; containers can reach each other by Compose service name.
+Nginx routes `http://dreamday.local` to the frontend and
+`http://api.dreamday.local` to the backend. Both services also remain available
+directly at `http://localhost:4000` and `http://localhost:8000`. Containers can
+reach each other by Compose service name on the local Docker network.
+
+Map both local domains to the host loopback address in `/etc/hosts`:
+
+```text
+127.0.0.1 dreamday.local api.dreamday.local
+```
+
+If `dreamday.local` is already mapped, add the API domain with:
+
+```sh
+printf '127.0.0.1 api.dreamday.local\n' | sudo tee -a /etc/hosts
+```
+
+Otherwise, add the full line shown above.
+
+The Nginx container listens on `127.0.0.1:80`, so the local domains are not
+published on other network interfaces. If port 80 is already in use, stop the
+service using it before starting this Compose stack. The frontend submodule's
+standalone dev Compose file also binds port 80; stop that stack before starting
+the root Compose stack.
 
 To rebuild selected images and start those services on this machine:
 
@@ -94,7 +117,10 @@ To rebuild selected images and start those services on this machine:
 ./scripts/deploy.sh all
 ```
 
-These commands build and run containers on the current Docker host. They do not publish or pull application images from a registry, or connect to a VPS. Stop the stack with `./scripts/dev.sh down`.
+The `all` command also starts the Nginx proxy. These commands build and run
+containers on the current Docker host. They do not publish or pull application
+images from a registry, or connect to a VPS. Stop the stack with
+`./scripts/dev.sh down`.
 
 ## Environment files
 
