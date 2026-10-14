@@ -52,7 +52,7 @@ git commit -m "chore: update frontend"
 
 Repeat for `apps/backend`, or update both with `git submodule update --remote`. To see the pinned commits, run `git submodule status`.
 
-The Compose file expects a `Dockerfile` at the root of each submodule. If a Dockerfile lives elsewhere, edit the corresponding `dockerfile:` path in `compose.yaml`; it is relative to that service's build context.
+This infrastructure stack runs the dev environment from each submodule, using `docker/dev/Dockerfile`. The Dockerfile path is relative to that service's build context. The submodules' production Dockerfiles are not used by this stack.
 
 ## Build and run locally
 
@@ -79,7 +79,7 @@ Start and manage the stack:
 ./scripts/dev.sh down
 ```
 
-The frontend is available at `http://localhost:3000` and the backend at `http://localhost:8000`. Both services share a local Docker network; containers can reach each other by Compose service name.
+The frontend is available at `http://localhost:4000` and the backend at `http://localhost:8000`. Both services share a local Docker network; containers can reach each other by Compose service name.
 
 To rebuild selected images and start those services on this machine:
 
