@@ -35,6 +35,10 @@ services:
       - "8000:8000"
     networks:
       - dreamday-local
+    volumes:
+      - type: bind
+        source: ./apps/backend
+        target: /app
 
   nginx:
     image: nginx:alpine
