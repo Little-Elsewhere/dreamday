@@ -57,7 +57,7 @@ git commit -m "chore: update frontend"
 
 Repeat for `apps/backend`, or update both with `git submodule update --remote`. To see the pinned commits, run `git submodule status`.
 
-This infrastructure stack runs the dev environment from each submodule, using `docker/dev/Dockerfile`. The Dockerfile path is relative to that service's build context. The submodules' production Dockerfiles are not used by this stack.
+This infrastructure stack runs the dev environment from each submodule, using `docker/dev/Dockerfile`. The Dockerfile path is relative to that service's build context. The submodules' production Dockerfiles are not used by this stack. The root Compose file also starts PostgreSQL 18 and Mailpit for the backend, applies Alembic migrations before the API starts, and exposes the local Mailpit inbox at <http://localhost:8025>.
 
 ## Build and run locally
 
@@ -131,10 +131,15 @@ images from a registry, or connect to a VPS. Stop the stack with
 | Frontend Compose secret | `env/frontend/doppler_token` | `compose.yaml` |
 | Backend Doppler token | `env/backend/doppler_token` | Added to Compose when backend Doppler is enabled |
 
-Create the local files from their examples before starting Compose. Replace the
-contents of `env/frontend/doppler_token` with the frontend's read-only Doppler
-service token. Git ignores the local token files. Compose mounts the frontend
-token as `/run/secrets/doppler_token`. The backend token is kept separately at
+Create the local files from their examples before starting Compose. In
+`env/backend/.env`, set the database credentials and generate a `JWT_SECRET_KEY`
+with at least 32 characters. The example points `EMAIL_VERIFICATION_URL` at the
+frontend's local English confirmation route; adjust it if that route changes.
+The backend connects to PostgreSQL and Mailpit using the
+Compose service names `backend-db` and `backend-mailpit`. Replace the contents
+of `env/frontend/doppler_token` with the frontend's read-only Doppler service
+token. Git ignores the local token files. Compose mounts the frontend token as
+`/run/secrets/doppler_token`. The backend token is kept separately at
 `env/backend/doppler_token`; it will be mounted only when the backend image is
 configured to load its environment from Doppler.
 
@@ -158,4 +163,5 @@ values in these files instead of adding an `environment` section to Compose.
 - **Submodule directory is empty:** run `git submodule update --init --recursive` and confirm Git can access both repositories.
 - **Compose reports a missing env file:** copy the matching `.env.example` to `.env` under the `env` directory.
 - **Compose cannot find a Dockerfile:** check the Dockerfile path inside the submodule and update the service's `dockerfile:` setting.
+- **Backend waits for migrations or fails its health check:** check the database credentials and `DB_HOST` in `env/backend/.env`, then inspect the `backend-db`, `backend-migrate`, and `backend` logs.
 - **A service cannot reach the other:** use its Compose service name and the port the application listens on inside the container; host `localhost` addresses are for clients outside the Docker network.
