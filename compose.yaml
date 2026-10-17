@@ -1,4 +1,40 @@
 services:
+  backend-db:
+    image: postgres:18-alpine
+    env_file:
+      - ./env/backend/.env
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - backend_postgres18_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - dreamday-local
+
+  backend-mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+    networks:
+      - dreamday-local
+
+  backend-migrate:
+    image: dreamday-backend:local
+    env_file:
+      - ./env/backend/.env
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      backend-db:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - dreamday-local
+
   frontend:
     image: dreamday-frontend:local
     build:
@@ -33,6 +69,17 @@ services:
       - ./env/backend/.env
     ports:
       - "8000:8000"
+    depends_on:
+      backend-migrate:
+        condition: service_completed_successfully
+      backend-mailpit:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
     networks:
       - dreamday-local
     volumes:
@@ -61,6 +108,7 @@ networks:
 volumes:
   frontend_node_modules:
   frontend_next:
+  backend_postgres18_data:
 
 secrets:
   frontend_doppler_token:
