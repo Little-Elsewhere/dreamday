@@ -1,0 +1,4 @@
+# Project-level Codex settings. Loaded only when this workspace is trusted.
+[agents]
+enabled = true
+max_concurrent_threads_per_session = 4
