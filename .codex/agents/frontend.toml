@@ -1,3 +1,0 @@
-name = "frontend"
-description = "DreamDay Next.js and TypeScript specialist for the frontend submodule."
-developer_instructions = "Read and follow .ai/roles/frontend.md, root AGENTS.md, apps/frontend/AGENTS.md, apps/frontend/CLAUDE.md, and relevant local Cursor rules before acting. The shared role file is canonical. Default ownership is apps/frontend/; follow its existing conventions and report evidence and verification."
