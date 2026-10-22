@@ -6,7 +6,3 @@
 	path = apps/backend
 	url = git@github.com:Little-Elsewhere/dreamday-backend.git
 	branch = develop
-[submodule "apps/devkit"]
-	path = apps/devkit
-	url = git@github.com:Little-Elsewhere/dreamday-devkit.git
-	branch = develop
