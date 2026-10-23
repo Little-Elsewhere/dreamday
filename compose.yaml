@@ -42,9 +42,6 @@ services:
       dockerfile: docker/dev/Dockerfile
     env_file:
       - ./env/frontend/.env
-    secrets:
-      - source: frontend_doppler_token
-        target: doppler_token
     ports:
       - "4000:4000"
     networks:
@@ -109,7 +106,3 @@ volumes:
   frontend_node_modules:
   frontend_next:
   backend_postgres18_data:
-
-secrets:
-  frontend_doppler_token:
-    file: ./env/frontend/doppler_token
