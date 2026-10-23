@@ -2,3 +2,4 @@
 /env/backend/doppler_token
 /env/frontend/.env
 /env/backend/.env
+/.pnpm-store/
