@@ -141,7 +141,8 @@ application, database, authentication, email verification, and SMTP settings.
 Keep local `.env` files out of Git. In `env/backend/.env`, set the database
 credentials and generate a `JWT_SECRET_KEY` with at least 32 characters. The
 example points `EMAIL_VERIFICATION_URL` at the frontend's local English
-confirmation route (`/en/auth/confirm`); adjust it if that route changes. The
+confirmation route (`/en/auth/confirm`) and `PASSWORD_RESET_URL` at
+`/en/auth/reset-password`; adjust them if those routes change. The
 backend connects to PostgreSQL and Mailpit using the Compose service names
 `backend-db` and `backend-mailpit`.
 
@@ -156,6 +157,10 @@ cp env/backend/.env.example env/backend/.env
 
 Compose currently loads each application service's variables with `env_file`;
 keep these files and their examples in sync when configuration keys change.
+
+## Documentation
+
+- [Authentication API (frontend contract)](docs/auth-api.md) — register / verify / login / refresh flows, message codes, and FE implementation notes.
 
 ## Troubleshooting
 
