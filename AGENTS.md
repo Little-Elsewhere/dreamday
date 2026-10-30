@@ -12,6 +12,10 @@ Dreamday is a travel-planning product. This repository integrates and pins the f
 - `nginx/` contains the proxy configuration. `scripts/` contains helpers for building and managing the root Compose stack; `deploy.sh` builds and starts containers on the current Docker host.
 - `env/frontend/.env.example` and `env/backend/.env.example` are templates for the root stack's runtime environment files. The root `README.md` is the runbook for setup, commands, and troubleshooting.
 
+## Agent rules
+
+Parent Cursor rules live in `.cursor/rules/` and are scoped with `apps/frontend/...` (and related) globs. Frontend-only conventions (`typescript`, `tailwind`, `i18n`, `hooks`, `react-compiler`) apply under `apps/frontend`. Shared UTC datetime contract is in `utc-datetime.mdc`. For deeper app guidance, also follow the submodule `AGENTS.md`.
+
 ## Change boundaries
 
 - Keep shared orchestration, proxy configuration, infrastructure scripts, shared environment templates, and submodule metadata in this repository.

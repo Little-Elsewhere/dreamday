@@ -1,0 +1,26 @@
+---
+description: FE↔BE datetimes are UTC ISO-8601; local zones only for display
+globs:
+  - apps/frontend/src/**/*.{ts,tsx}
+  - apps/backend/app/**/*.py
+  - docs/**/*.md
+alwaysApply: false
+---
+
+# UTC datetime contract
+
+FE and BE exchange **instants in UTC** only.
+
+- **Wire format:** ISO-8601 with a `Z` suffix (e.g. `2026-10-30T12:00:00Z`).
+- **Backend:** store `timestamptz`; use `utc_now()` / `UtcInstant` for app + JSON.
+- **Frontend:** validate API strings with `utcInstantSchema` (`z.iso.datetime()`). Do not hand-roll datetime regex guards.
+- **Display:** `new Date(validatedIso)` + next-intl formatters in UI only. Never persist or send local-offset datetimes on the API.
+
+```ts
+// ❌ BAD — trust external JSON / treat as local wall time
+const createdAt = json.created_at as string
+
+// ✅ GOOD — Zod boundary, then format for display
+const { created_at: createdAt } = userResponseSchema.parse(json)
+format.dateTime(new Date(createdAt), { dateStyle: 'medium', timeStyle: 'short' })
+```

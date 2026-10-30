@@ -3,6 +3,9 @@ services:
     image: postgres:18-alpine
     env_file:
       - ./env/backend/.env
+    environment:
+      TZ: UTC
+      PGTZ: UTC
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
