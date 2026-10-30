@@ -109,6 +109,7 @@ Index: `(family_id)`.
 
 ## Notes for readers
 
+- All datetime columns are PostgreSQL **`timestamptz`**. Backend stores/compares UTC (`UtcDateTime` / `utc_now()`). FE↔BE JSON datetimes are UTC ISO-8601 with a `Z` suffix; convert to a local zone only for display.
 - Raw verification / reset / refresh secrets are **never** stored; only hashes.
 - Deleting a user cascades to all of their tokens.
 - Refresh **rotation**: each successful `/refresh` inserts a new row, revokes the old one, and sets `replaced_by_id`. Reuse of a revoked token revokes the whole `family_id`.

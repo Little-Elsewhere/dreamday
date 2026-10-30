@@ -14,6 +14,14 @@ Use **`code`** for i18n / branching. Treat `message` as an English fallback only
 
 Emails are normalized server-side (`strip` + lowercase). Password on register: **12–128** characters.
 
+### Date and time (UTC)
+
+FE and BE exchange **instants in UTC** only:
+
+- JSON datetime fields are ISO-8601 with a `Z` suffix (example: `2026-10-30T12:00:00Z`).
+- Backend stores `timestamptz` and serializes/parses via UTC helpers.
+- Frontend should treat API values as UTC; convert to a local zone only for display.
+
 ---
 
 ## End-to-end overview
@@ -384,7 +392,7 @@ Always treat as logged out on the client after calling (or if call fails, still 
 
 | Result | Status | Code | FE |
 | --- | --- | --- | --- |
-| OK | `200` | — | `{ id, email, is_email_verified, created_at }` |
+| OK | `200` | — | `{ id, email, is_email_verified, created_at }` (`created_at` = UTC ISO-8601 `...Z`) |
 | Missing Bearer | `401` | `1009` | Refresh or login |
 | Bad / expired access, or inactive / unverified user | `401` | `1010` | Refresh or login |
 
@@ -433,3 +441,4 @@ stateDiagram-v2
 8. Reset page: read `token` → `POST /reset-password`; on `1015` go to login.
 9. Update password: send `current_password` + `new_password` with Bearer; on success **replace** tokens (response is token payload, not a `code`).
 10. After logout, failed refresh, or successful **reset-password**, clear auth state before showing login.
+11. Parse API datetimes as UTC (`...Z`); do not assume the browser local zone until formatting for display.
