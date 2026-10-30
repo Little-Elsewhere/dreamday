@@ -161,6 +161,7 @@ keep these files and their examples in sync when configuration keys change.
 ## Documentation
 
 - [Authentication API (frontend contract)](docs/auth-api.md) — register / verify / login / refresh flows, message codes, and FE implementation notes.
+- [Database ERD](docs/database-erd.md) — PostgreSQL tables and relationships for the current backend schema.
 
 ## Troubleshooting
 
