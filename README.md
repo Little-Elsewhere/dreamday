@@ -136,7 +136,7 @@ images from a registry, or connect to a VPS. Stop the stack with
 
 Create the root-level local files from their examples before starting the root
 Compose stack. The frontend template groups public application metadata, runtime
-behavior, analytics, and development settings. The backend template groups
+behavior, and development settings. The backend template groups
 application, database, authentication, email verification, and SMTP settings.
 Keep local `.env` files out of Git. In `env/backend/.env`, set the database
 credentials and generate a `JWT_SECRET_KEY` with at least 32 characters. The
