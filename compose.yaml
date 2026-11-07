@@ -58,6 +58,10 @@ services:
     restart: "no"
     networks:
       - dreamday-local
+    volumes:
+      - type: bind
+        source: ./apps/backend
+        target: /app
 
   frontend:
     image: dreamday-frontend:local

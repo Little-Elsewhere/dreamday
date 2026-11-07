@@ -18,7 +18,8 @@ This repository coordinates the frontend and backend Git submodules and runs the
 ├── scripts/
 │   ├── build.sh
 │   ├── deploy.sh
-│   └── dev.sh
+│   ├── dev.sh
+│   └── setup-hosts.sh
 └── README.md
 ```
 
@@ -90,24 +91,46 @@ Nginx routes `http://dreamday.local` to the frontend and
 directly at `http://localhost:4000` and `http://localhost:8000`. Containers can
 reach each other by Compose service name on the local Docker network.
 
-Map both local domains to the host loopback address in `/etc/hosts`:
+Map the local domains to loopback (writes `/etc/hosts`; prompts for `sudo` when
+needed). Safe to re-run:
+
+```sh
+./scripts/setup-hosts.sh
+```
+
+That ensures:
 
 ```text
 127.0.0.1 dreamday.local api.dreamday.local media.dreamday.local
 ```
 
-If `dreamday.local` is already mapped, add the API and media domains with:
+Verify without changing the file with `./scripts/setup-hosts.sh check`.
+
+Trip cover uploads use a **private** S3-compatible store. The local stack runs
+**RustFS** (`backend-rustfs` on ports `9000`/`9001`). Browsers never read the
+bucket anonymously; covers are streamed through the API
+(`/api/v1/trips/{id}/cover`) and the Next.js proxy (`/api/trips/{id}/cover`)
+after visibility and membership checks. Point the same `S3_*` keys in
+`env/backend/.env` at Cloudflare R2 for production — keep the bucket private.
+`S3_PUBLIC_BASE_URL` is unused for browser access (deprecated; kept for Settings
+compatibility). If an older local bucket still has a public-read policy, remove
+it once so local matches private prod, for example:
 
 ```sh
-printf '127.0.0.1 api.dreamday.local media.dreamday.local\n' | sudo tee -a /etc/hosts
+docker compose exec backend python - <<'PY'
+import asyncio
+from app.core.storage import create_object_storage
+async def main():
+    s = create_object_storage()
+    async with s._client() as client:
+        try:
+            await client.delete_bucket_policy(Bucket=s._bucket)
+            print('deleted bucket policy')
+        except Exception as e:
+            print(type(e).__name__, e)
+asyncio.run(main())
+PY
 ```
-
-Otherwise, add the full line shown above.
-
-Trip cover uploads use an S3-compatible store. The local stack runs **RustFS**
-(`backend-rustfs` on ports `9000`/`9001`, public reads via
-`http://media.dreamday.local`). Point the same `S3_*` keys in
-`env/backend/.env` at Cloudflare R2 for production — no application code change.
 
 Nginx listens on `127.0.0.1:80`, and PostgreSQL and Mailpit ports are also bound
 to loopback. The frontend and backend ports are published as `4000:4000` and
@@ -174,4 +197,5 @@ keep these files and their examples in sync when configuration keys change.
 - **Compose reports a missing env file:** copy the matching `.env.example` to `.env` under the `env` directory.
 - **Compose cannot find a Dockerfile:** check the Dockerfile path inside the submodule and update the service's `dockerfile:` setting.
 - **Backend waits for migrations or fails its health check:** check the database credentials and `DB_HOST` in `env/backend/.env`, then inspect the `backend-db`, `backend-migrate`, and `backend` logs.
+- **Anonymous cover URL returns 403 from RustFS:** expected — the bucket is private. Use `/api/trips/{id}/cover` (or the API cover route) after authz. Remove any leftover public bucket policy with the one-off snippet above.
 - **A service cannot reach the other:** use its Compose service name and the port the application listens on inside the container; host `localhost` addresses are for clients outside the Docker network.
