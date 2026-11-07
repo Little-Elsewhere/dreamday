@@ -93,16 +93,21 @@ reach each other by Compose service name on the local Docker network.
 Map both local domains to the host loopback address in `/etc/hosts`:
 
 ```text
-127.0.0.1 dreamday.local api.dreamday.local
+127.0.0.1 dreamday.local api.dreamday.local media.dreamday.local
 ```
 
-If `dreamday.local` is already mapped, add the API domain with:
+If `dreamday.local` is already mapped, add the API and media domains with:
 
 ```sh
-printf '127.0.0.1 api.dreamday.local\n' | sudo tee -a /etc/hosts
+printf '127.0.0.1 api.dreamday.local media.dreamday.local\n' | sudo tee -a /etc/hosts
 ```
 
 Otherwise, add the full line shown above.
+
+Trip cover uploads use an S3-compatible store. The local stack runs **RustFS**
+(`backend-rustfs` on ports `9000`/`9001`, public reads via
+`http://media.dreamday.local`). Point the same `S3_*` keys in
+`env/backend/.env` at Cloudflare R2 for production — no application code change.
 
 Nginx listens on `127.0.0.1:80`, and PostgreSQL and Mailpit ports are also bound
 to loopback. The frontend and backend ports are published as `4000:4000` and
