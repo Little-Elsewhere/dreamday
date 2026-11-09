@@ -8,6 +8,7 @@ This repo pins the frontend/backend Git submodules and owns the shared local sta
 - `apps/backend` — FastAPI + Alembic (submodule)
 - `compose.yaml`, `nginx/`, `scripts/`, `env/` — root orchestration only
 - `.cursor/rules/frontend/` — Cursor rules scoped to `apps/frontend`
+- `.claude/rules/frontend/` — Claude Code path-scoped rules (same topics; keep in sync with `.cursor/rules/frontend/`)
 
 For app-specific guidance, follow that submodule's `AGENTS.md` and README.
 
