@@ -9,12 +9,13 @@ Mọi tính năng trip đều cần biết người dùng là ai. Lời mời qu
 ### Tài khoản (chỉ email + mật khẩu trong MVP)
 
 - Đăng ký bằng email + mật khẩu + **tên hiển thị (bắt buộc)**. Email được chuẩn hóa (trim + lowercase).
-- Mật khẩu 8–128 ký tự, không bắt buộc ký tự đặc biệt.
+- Mật khẩu 8–128 ký tự, có ít nhất 1 chữ hoa, 1 chữ thường, 1 chữ số và 1 ký tự đặc biệt.
 - **Bắt buộc xác thực email** trước khi đăng nhập và dùng app; gửi lại email xác thực được (có cooldown).
 - Đăng nhập, đăng xuất, quên mật khẩu (link đặt lại có hạn ngắn), đổi mật khẩu khi đã đăng nhập.
 - Đặt lại / đổi mật khẩu thì **mọi phiên đăng nhập khác bị đăng xuất**.
 - **Giới hạn đăng nhập sai theo từng tài khoản** (không giới hạn theo IP): sai **5 lần liên tiếp** thì **khóa đăng nhập 30 phút** và báo rõ cho người dùng; đăng nhập đúng thì đếm lại từ 0. **Đặt lại mật khẩu qua email mở khóa ngay** (chống việc người khác cố tình khóa tài khoản).
-- Endpoint quên mật khẩu và gửi lại email xác thực không tiết lộ email có tồn tại hay không.
+- Đăng ký, quên mật khẩu và gửi lại email xác thực **không tiết lộ email có tồn tại hay không** (phản hồi giống hệt nhau). Đăng ký bằng email đã có tài khoản thì gửi email báo "bạn đã có tài khoản" kèm link đăng nhập / quên mật khẩu.
+- Link xác thực email và link đặt lại mật khẩu dùng một lần, **hết hạn sau 15 phút**; gửi lại tối đa **1 lần mỗi 60 giây**, link mới vô hiệu link cũ.
 - Luồng đăng ký / đăng nhập **giữ lại lời mời đang mở** (link hoặc email) để quay về chấp nhận sau khi xong.
 
 ### Phiên đăng nhập
