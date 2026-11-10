@@ -1,6 +1,11 @@
 # Dreamday Infrastructure
 
-Orchestration repo only: it pins the `apps/frontend` and `apps/backend` submodules and owns the shared local stack (Compose, Nginx, scripts, env templates). App code, app docs, and agent rules belong in the relevant submodule; follow its own `AGENTS.md` / `CLAUDE.md`.
+Orchestration and specs repo: it pins the `apps/frontend` and `apps/backend` submodules, owns the shared local stack (Compose, Nginx, scripts, env templates), and holds the product specs in `openspec/`. App code, app docs, and app-specific agent rules belong in the relevant submodule; follow its own `AGENTS.md` / `CLAUDE.md`. Root `.claude/` holds only the OpenSpec commands and skills.
+
+## Specs
+
+- `openspec/` is the source of truth for product behavior across FE and BE. The system is being rebuilt from these specs; existing app code is reference only.
+- Follow `openspec/config.yaml` for project-wide rules. Work flows propose → specs → tests (red) → implement → archive; do not implement behavior that no approved spec requires.
 
 ## Submodules
 
@@ -15,4 +20,4 @@ Orchestration repo only: it pins the `apps/frontend` and `apps/backend` submodul
 
 ## Docs
 
-`docs/` holds FE↔BE contracts (API, ERD); `apps/backend` is the source of truth. Datetimes are UTC: `timestamptz` in the DB, ISO-8601 with `Z` on the wire.
+`docs/` describes the legacy implementation's FE↔BE contracts (API, ERD); use it as reference only, not as a spec.
