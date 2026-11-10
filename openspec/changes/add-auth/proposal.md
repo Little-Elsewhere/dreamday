@@ -44,7 +44,7 @@ Mọi tính năng trip đều cần biết người dùng là ai. Lời mời qu
 
 - Là nền cho mọi change khác (`trips`, `trip-membership`, …).
 - Cần gửi email (SMTP; Mailpit khi chạy local) và lưu trữ file (S3-compatible; RustFS khi chạy local).
-- Frontend: các màn hình auth, trang hồ sơ, cắt ảnh avatar.
+- Frontend: các màn hình auth, trang hồ sơ, upload avatar (server tự cắt vuông ở giữa).
 
 ## Out of scope (MVP)
 

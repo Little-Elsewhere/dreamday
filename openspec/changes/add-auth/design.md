@@ -1,0 +1,120 @@
+# Design
+
+## Context
+
+- Đây là change đầu tiên của bản dựng lại: chưa có người dùng, chưa có dữ liệu cần giữ. Code cũ trong `apps/*` chỉ để tham khảo (xem proposal.md - Why).
+- Stack local đã có: PostgreSQL, Mailpit (SMTP), RustFS (S3), Nginx với `dreamday.local` → frontend, `api.dreamday.local` → backend, `media.dreamday.local` → RustFS.
+- Yêu cầu hành vi nằm trong `specs/user-auth` và `specs/user-profile`; tài liệu này chỉ ghi các quyết định kỹ thuật không suy ra được từ spec.
+
+## Goals / Non-Goals
+
+**Goals:**
+- Khung code mới, tối giản, đủ làm nền cho các change sau (trips, membership, …).
+- Mọi scenario của change này có test tự động chạy được trên máy local và CI.
+
+- Backend viết bằng Rust và đồng thời là dự án học Rust của người làm: ưu tiên code tường minh, dễ đọc hơn code ngắn gọn dùng nhiều macro hay trừu tượng.
+
+**Non-Goals:**
+- Hàng đợi việc nền (queue/worker), cache, rate limit theo IP, quan sát/metrics.
+- Tách thư viện dùng chung giữa FE và BE (quy tắc validate được viết ở cả hai phía).
+- Sinh tài liệu OpenAPI (frontend gọi backend qua vài endpoint, kiểu dữ liệu viết tay bằng zod).
+
+## Decisions
+
+### D0. Backend chuyển từ FastAPI sang Rust (axum)
+Backend viết lại bằng Rust: `axum` (HTTP), `tokio` (async runtime), `sqlx` (PostgreSQL, migration), `serde` (JSON), `thiserror` (kiểu lỗi), `tracing` (log).
+- Lý do: người làm muốn học Rust thật sự và chấp nhận chậm trong vài tháng đầu. Thời điểm đổi rẻ nhất vì chưa có code mới; spec không phụ thuộc ngôn ngữ.
+- Thay vì: giữ FastAPI → nhanh hơn lúc đầu nhưng không đạt mục tiêu học.
+
+### D1. Dựng lại trong chính hai submodule, gắn tag cho code cũ
+Code cũ được gắn tag `legacy` trên remote rồi xóa khỏi nhánh `develop` ở task đầu tiên; bộ khung mới viết từ đầu.
+- Thay vì: viết song song trong thư mục mới → hai bộ code cùng tồn tại, dễ nhầm và dễ "bê" code cũ sang. Tag giữ lại được mọi thứ để tham khảo.
+
+### D2. Backend: một crate, tổ chức theo feature
+Một crate duy nhất (không workspace). `src/auth/`, `src/profile/` mỗi nơi gồm `routes.rs` (handler axum), `service.rs` (logic + truy vấn sqlx), `model.rs` (struct dữ liệu); phần dùng chung ở `src/core/` (config, `AppState`, `AppError`, clock, mailer, storage).
+- `AppError` là một `enum` implement `IntoResponse`, trả lỗi dạng D14. Handler trả `Result<_, AppError>`.
+- Truy vấn dùng `sqlx::query!`/`query_as!` để SQL được kiểm tra với schema lúc build; `.sqlx/` (cache truy vấn) được commit để build Docker/CI không cần DB.
+- Migration là file SQL trong `migrations/`, chạy bằng `sqlx::migrate!()` khi app khởi động (sqlx tự giữ advisory lock); không cần service migrate riêng.
+- Thay vì: ORM (SeaORM, Diesel) → thêm một lớp phải học, che mất SQL; tầng repository như code cũ → thêm một tầng chỉ để chuyển tiếp.
+
+### D3. Test backend chạy trên PostgreSQL thật
+- `#[sqlx::test]` tạo một database riêng cho mỗi test trên Postgres của Compose và chạy sẵn migration; test gọi thẳng `Router` bằng `tower::ServiceExt::oneshot`, không mở cổng HTTP.
+- Thời gian, gửi email và lưu file đi qua trait trong `AppState` (`Clock`, `Mailer`, `Storage`); test dùng bản giả (đồng hồ chỉnh được, mailer ghi vào bộ nhớ) để kiểm tra các mốc 60 giây / 15 phút / 30 phút / 30 ngày mà không phải chờ. Test tích hợp storage dùng RustFS thật.
+- Tên test chứa ID scenario (ví dụ `user_auth_s23_locks_on_fifth_failure`).
+- Frontend: Vitest cho logic thuần (validate mật khẩu, kiểm tra đích quay lại), Playwright cho luồng chính, đọc email qua API của Mailpit.
+
+### D4. Mô hình dữ liệu
+```
+users           id, email (unique), password_hash, display_name, email_verified_at,
+                avatar_key, created_at, updated_at
+sessions        id, user_id, token_hash (unique), created_at, last_used_at,
+                expires_at, revoked_at
+email_tokens    id, user_id, purpose (verify_email | reset_password), token_hash (unique),
+                created_at, expires_at, consumed_at, revoked_at
+login_throttles email (PK, đã chuẩn hóa), failed_count, locked_until, updated_at
+```
+- `users` chưa có `deleted_at` vì xóa tài khoản nằm ngoài phạm vi; thêm khi có change xóa tài khoản.
+- Một bảng `email_tokens` cho cả hai loại link vì chúng có cùng vòng đời (phát, hết hạn, dùng, bị thay). Phát link mới thì đặt `revoked_at` cho các link còn hiệu lực cùng `purpose`. Cooldown 60 giây kiểm tra bằng `created_at` của link gần nhất cùng `purpose`.
+- `login_throttles` khóa theo email, không theo `user_id`, để email không có tài khoản cũng bị đếm và khóa (USER-AUTH-S27).
+
+### D5. Token: ngẫu nhiên 256 bit, lưu SHA-256
+Session token và token trong link email đều có 256 bit ngẫu nhiên; DB chỉ lưu SHA-256 của token.
+Token sinh từ 32 byte của `rand` (CSPRNG của hệ điều hành), mã hóa base64url; hash bằng `sha2`.
+- Thay vì: argon2/bcrypt cho token → token đã đủ ngẫu nhiên nên hash nhanh là đủ, và tra cứu được bằng index.
+- Mật khẩu dùng argon2id (crate `argon2`). Hash và verify argon2 tốn CPU nên chạy trong `tokio::task::spawn_blocking` để không chặn runtime.
+
+### D6. Chuẩn hóa Unicode
+Mật khẩu và tên hiển thị được chuẩn hóa NFC (crate `unicode-normalization`) trước khi kiểm tra và lưu/hash. Độ dài tính theo số ký tự (`char`) sau NFC, không theo byte. Phân loại chữ hoa/thường/chữ số dùng `char::is_uppercase`, `is_lowercase`, `is_numeric` của Rust (theo Unicode).
+- Lý do: cùng một chữ `ạ` có thể được bàn phím gửi ở dạng dựng sẵn hoặc tổ hợp; không chuẩn hóa thì người dùng gõ đúng mật khẩu vẫn bị báo sai khi đổi thiết bị.
+
+### D7. Chống dò email bằng thời gian phản hồi
+- Đăng nhập với email không có tài khoản vẫn chạy verify argon2 với một hash giả, để thời gian phản hồi tương đương email có tài khoản.
+- Đăng ký / gửi lại xác thực / quên mật khẩu: gửi email trong một task `tokio::spawn` tách khỏi request, để việc có hay không gửi email không làm chênh thời gian phản hồi.
+- Đếm sai đăng nhập dùng `INSERT … ON CONFLICT … DO UPDATE` trên `login_throttles` để nhiều request song song không làm sai bộ đếm. Trạng thái khóa được kiểm tra trước khi verify mật khẩu.
+
+### D8. Gửi email trực tiếp qua SMTP, không có hàng đợi
+`lettre` (async, tokio) gửi trong task `tokio::spawn` tách khỏi request; mẫu email viết bằng `askama` (template được kiểm tra lúc build), tách theo ngôn ngữ (`vi`, `en`). Ngôn ngữ lấy từ header `Accept-Language` mà frontend đặt bằng locale hiện tại của giao diện (USER-AUTH-R15).
+- Thay vì: queue + worker → thêm hạ tầng; khi gửi lỗi người dùng đã có nút gửi lại.
+
+### D9. Mở link trong email không tự dùng token
+Link email trỏ tới trang frontend (`/{locale}/verify-email?token=…`, `/{locale}/reset-password?token=…`). Trang xác thực hiển thị nút "Xác thực email"; token chỉ bị dùng khi người dùng bấm (POST).
+- Lý do: một số dịch vụ email (bộ lọc link an toàn) tự mở link để quét; nếu GET đã dùng token thì link chết trước khi người dùng bấm, đặc biệt nguy hiểm khi link chỉ sống 15 phút.
+
+### D10. Phiên qua BFF
+- Next.js gọi `POST /auth/login` phía server, nhận token trong body và tự đặt cookie `dd_session` (`HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, `Max-Age` 30 ngày). Mỗi lần Next.js gọi backend thay cho người dùng, nó gửi `Authorization: Bearer <token>`.
+- Backend không đặt cookie và không đọc cookie; mọi API cần đăng nhập chỉ nhận header `Authorization`.
+- Mỗi request hợp lệ cập nhật `last_used_at` và `expires_at = now + 30 ngày` (một câu `UPDATE`). Next.js làm mới `Max-Age` của cookie trong `proxy.ts` để cookie không hết hạn trước phiên.
+- Mutation đi qua Server Actions, vốn đã kiểm tra `Origin`; kết hợp `SameSite=Lax` là đủ chống CSRF, không cần token CSRF riêng.
+
+### D11. Đích quay lại
+Tham số `next` được chấp nhận chỉ khi bắt đầu bằng một `/` và không bắt đầu bằng `//` hoặc `/\`; ngược lại bị bỏ qua (USER-AUTH-R14). Khi đăng ký, `next` được gắn vào link xác thực trong email để giữ được đích kể cả khi người dùng mở email trên thiết bị khác, rồi được truyền tiếp sang trang đăng nhập.
+
+### D12. Avatar
+- Xử lý ảnh bằng crate `image`: nhận diện định dạng từ nội dung (`with_guessed_format`), chỉ nhận `JPEG`/`PNG`/`WEBP`, đặt `image::Limits` để chặn ảnh "bom giải nén", xoay theo orientation EXIF trước khi bỏ metadata, cắt vuông ở giữa, resize 512×512. Encode WebP **lossy** bằng crate `webp` (bọc libwebp) vì `image` chỉ ghi được WebP lossless (file lớn hơn nhiều). Ảnh encode lại từ pixel nên không mang theo metadata nào.
+- Xử lý ảnh tốn CPU nên chạy trong `spawn_blocking`. Body upload bị giới hạn 5 MB bằng `DefaultBodyLimit` của axum.
+- S3 dùng `aws-sdk-s3` với `force_path_style` để làm việc với RustFS.
+- Lưu ở bucket công khai với key ngẫu nhiên `avatars/<uuid4>.webp`, header `Cache-Control: public, max-age=31536000, immutable`. URL = `MEDIA_PUBLIC_URL` + key.
+- Thay/gỡ avatar: ghi key mới vào DB trước, sau đó chuyển file cũ sang bucket riêng tư (`archive/avatars/<user_id>/<key>`) bằng copy rồi xóa khỏi bucket công khai.
+- Frontend chưa có công cụ cắt ảnh trong change này; server cắt vuông ở giữa theo USER-PROFILE-R3.
+- Upload đi qua Server Action nên cần nâng `serverActions.bodySizeLimit` của Next.js lên 6 MB.
+
+### D13. Avatar mặc định tính ở frontend
+Chữ cái đầu và màu nền tính ở frontend từ tên hiển thị và `user.id` (hash id → một màu trong bảng màu cố định). Backend không lưu gì thêm.
+
+### D14. Lỗi API dạng mã, dịch ở frontend
+Backend trả lỗi dạng `{ "code": "...", "fields": { "<field>": ["<code>", …] } }`, ví dụ `password_missing_uppercase`. Frontend dịch mã sang tiếng Việt/Anh. Frontend cũng kiểm tra trước bằng zod để báo lỗi ngay khi gõ, nhưng backend luôn là nơi quyết định.
+
+## Risks / Trade-offs
+
+- [Server dừng sau khi trả response nhưng trước khi gửi xong email] → Email bị mất; người dùng bấm gửi lại. Chấp nhận được ở MVP.
+- [Kẻ xấu cố tình nhập sai để khóa tài khoản người khác] → Đặt lại mật khẩu qua email mở khóa ngay (USER-AUTH-R11).
+- [Link 15 phút hết hạn khi email đến chậm] → Trang báo hết hạn có sẵn nút gửi lại link mới.
+- [Rust mới học nên chậm và dễ viết code khó đọc] → Task nhỏ, mỗi PR giải thích khái niệm Rust mới dùng; `cargo clippy -D warnings` và `cargo fmt` trong CI; tránh macro tự viết và generic khi chưa cần.
+- [Build Rust trong Docker lâu] → Dùng `cargo-chef` để cache bước build dependency.
+- [Crate `webp` cần libwebp (C)] → Dùng feature build tĩnh đi kèm crate; nếu vướng, tạm encode lossless rồi xử lý sau (không ảnh hưởng spec).
+- [Mỗi request ghi vào bảng `sessions`] → Chấp nhận ở quy mô hiện tại; nếu thành điểm nghẽn thì chỉ gia hạn khi lần gia hạn trước đã quá một khoảng ngắn.
+- [Chuyển file avatar cũ thất bại sau khi DB đã cập nhật] → File cũ còn ở bucket công khai nhưng không còn được tham chiếu; ghi log để chuyển lại thủ công.
+
+## Migration Plan
+
+Không có dữ liệu cần chuyển. Database local được tạo lại từ đầu bằng migration `sqlx`; migration Alembic cũ đi theo tag `legacy`. Service `backend-migrate` trong Compose được bỏ vì app tự chạy migration khi khởi động (D2).
