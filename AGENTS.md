@@ -1,21 +1,18 @@
-# Dreamday Infrastructure Agent Instructions
+# Dreamday Infrastructure
 
-This repo pins the frontend/backend Git submodules and owns the shared local stack (Compose, Nginx, scripts, env templates). App source lives in the submodules. Setup, ports, and commands: see root `README.md`.
+Orchestration repo only: it pins the `apps/frontend` and `apps/backend` submodules and owns the shared local stack (Compose, Nginx, scripts, env templates). App code, app docs, and agent rules belong in the relevant submodule; follow its own `AGENTS.md` / `CLAUDE.md`.
 
-## Layout
+## Submodules
 
-- `apps/frontend` — Next.js (submodule)
-- `apps/backend` — FastAPI + Alembic (submodule)
-- `compose.yaml`, `nginx/`, `scripts/`, `env/` — root orchestration only
-- `.cursor/rules/frontend/` — Cursor rules scoped to `apps/frontend`
-- `.claude/rules/frontend/` — Claude Code path-scoped rules (same topics; keep in sync with `.cursor/rules/frontend/`)
+- Change app code inside the submodule, commit and push there first, then commit the new gitlink here as a separate `chore: pin …` commit.
+- Never bump a pin as a side effect; verify the submodule commit exists on its remote before pinning.
 
-For app-specific guidance, follow that submodule's `AGENTS.md` and README.
+## Shared stack
 
-## Change boundaries
+- When changing a service, port, path, or env key, update `compose.yaml`, `nginx/`, `env/*/.env.example`, and `README.md` together.
+- `env/*/.env` feed the root stack; `apps/*/.env` feed each submodule's standalone stack. Never commit either; update the matching `.env.example` when keys change.
+- Inside Docker, services reach each other by Compose service name, not `localhost`.
 
-- Keep orchestration, proxy, scripts, env templates, and submodule pins in this repo.
-- Change app code only in the relevant submodule when the task targets that app.
-- Do not bump a submodule pin as a side effect; verify remote and intended commit first.
-- When changing a shared service, port, path, or env key, update Compose, Nginx, templates, and README together.
-- Never commit local `.env` files or credentials; update the example templates when keys change.
+## Docs
+
+`docs/` holds FE↔BE contracts (API, ERD); `apps/backend` is the source of truth. Datetimes are UTC: `timestamptz` in the DB, ISO-8601 with `Z` on the wire.
