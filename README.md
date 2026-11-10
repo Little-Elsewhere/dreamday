@@ -28,9 +28,29 @@ Each submodule is pinned to a commit recorded by this repository. Updating a sub
 ## Prerequisites
 
 - Git access to both submodule repositories.
-- Docker Engine and Docker Compose v2.
+- Docker Engine and Docker Compose v2 (OrbStack on macOS).
 - Local env files copied from `env/frontend/.env.example` and
   `env/backend/.env.example`.
+
+### New macOS machine
+
+Tool setup lives in the repository, so every machine is set up the same way:
+
+1. Install the tools listed in `Brewfile`:
+
+   ```sh
+   brew bundle
+   ```
+
+2. Homebrew installs `rustup` keg-only, so add its binaries to `PATH` once (then open a new shell):
+
+   ```sh
+   echo 'export PATH="$(brew --prefix rustup)/bin:$PATH"' >> ~/.zshrc
+   ```
+
+3. Run any `cargo` command inside `apps/backend`. `rustup` reads `apps/backend/rust-toolchain.toml` and installs the pinned channel and components on first use.
+
+Check a machine with `brew bundle check`, and `cargo --version` and `cargo clippy --version` inside `apps/backend`.
 
 The root Compose stack loads per-service variables from these files using `env_file`. These values are available to containers at runtime; values needed while building an image must be provided through that image's build configuration.
 
