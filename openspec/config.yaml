@@ -1,32 +1,50 @@
 schema: spec-driven
 
-# Project context (optional)
-# Add only constraints that should guide OpenSpec artifacts and workflows.
-# Include constraints an agent cannot infer by reading the code.
-# Keep general project documentation and discoverable codebase facts out.
-# Example:
-#   context: |
-#     Designs and tasks must cover Windows, macOS, and Linux
-#     Write all artifacts in Spanish
+context: |
+  Dreamday: responsive web app for group trip planning; long-term direction is a social network
+  where users browse public trips to plan their own. No users yet — rebuilt from scratch.
+  Old code in apps/* is reference only; never carry over its complexity.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always state what is out of scope
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  Repos: specs live here (infra repo); code lives in submodules apps/backend (FastAPI, PostgreSQL,
+  Alembic) and apps/frontend (Next.js App Router, next-intl, shadcn/ui). The browser never holds
+  auth tokens; Next.js calls the backend server-side.
 
-# Per-operation guidance (optional)
-# Add advisory guidance for how apply and archive work should be conducted.
-# This is separate from artifact rules above.
-# Example:
-#   operations:
-#     apply:
-#       guidance:
-#         - Keep test summaries concise
-#     archive:
-#       guidance:
-#         - Summarize the archive outcome before finishing
+  System-wide rules:
+  - Soft delete only, never hard delete. Every deletable record has deleted_at; deleted records
+    are restorable from the UI. No automatic purge. Children are not cascade-deleted: a deleted
+    parent makes them inaccessible, and restoring the parent brings them back intact. Technical
+    records (sessions, tokens, invitations) are marked revoked/consumed/expired instead.
+    Unique constraints apply to non-deleted rows only.
+  - Instants are stored and exchanged in UTC (ISO-8601 with Z). Trip dates are calendar dates.
+    Schedule times are local wall time plus an IANA timezone name (never a fixed offset).
+  - Money is an integer in the currency's minor unit plus an ISO 4217 code; one currency per trip.
+  - Public views are separate response shapes, never a filtered internal response. They never
+    expose emails, free-text notes, member lists, invitations, payers/splits, or balances.
+  - Images: publicly visible images are served from a public storage area by unguessable URL
+    (CDN-cacheable); private images are served from a private area by short-lived presigned URL
+    issued after a permission check. Replaced/removed files move to the private area (never deleted).
+    Uploads: JPEG/PNG/WebP, max 5 MB, format checked by content, re-encoded to WebP with metadata stripped.
+  - Emails are shown only to their owner and to trip owners; never to other members or publicly.
+  - UI: mobile-first responsive for mobile, tablet, and laptop; Be Vietnam Pro font; all UI copy
+    and date/number/currency formatting localized in English and Vietnamese.
+  - YAGNI: specify only what the current change needs; put "later" ideas in Out of scope.
+
+rules:
+  proposal:
+    - Write in Vietnamese
+    - Always include Out of scope and Open questions sections
+  specs:
+    - Write requirement and scenario prose in Vietnamese; keep SHALL/MUST, WHEN/THEN keywords
+    - Give every requirement a stable ID (<CAPABILITY>-R<n>) and every scenario an ID (<CAPABILITY>-S<n>); never reuse IDs
+    - Cover permission (owner/member/viewer/public) and data-boundary scenarios for every read and write
+  design:
+    - Only record decisions that are not obvious from the specs; skip design.md when there are none
+  tasks:
+    - Each capability starts with tasks that write failing tests for its scenarios, referencing scenario IDs
+    - Keep each task small enough for a reviewable PR (under ~400 changed lines)
+
+operations:
+  apply:
+    guidance:
+      - Write or update failing tests before implementation code (TDD)
+      - Do not implement behavior that no scenario requires
