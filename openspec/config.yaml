@@ -5,8 +5,8 @@ context: |
   where users browse public trips to plan their own. No users yet — rebuilt from scratch.
   Old code in apps/* is reference only; never carry over its complexity.
 
-  Repos: specs live here (infra repo); code lives in submodules apps/backend (FastAPI, PostgreSQL,
-  Alembic) and apps/frontend (Next.js App Router, next-intl, shadcn/ui). The browser never holds
+  Repos: specs live here (infra repo); code lives in submodules apps/backend (Rust, axum, sqlx,
+  PostgreSQL) and apps/frontend (Next.js App Router, next-intl, shadcn/ui). The browser never holds
   auth tokens; Next.js calls the backend server-side.
 
   System-wide rules:
@@ -48,3 +48,4 @@ operations:
     guidance:
       - Write or update failing tests before implementation code (TDD)
       - Do not implement behavior that no scenario requires
+      - The backend doubles as the owner's Rust learning project: prefer plain, explicit code over macros and clever abstractions, and explain each Rust concept the first time a task uses it
