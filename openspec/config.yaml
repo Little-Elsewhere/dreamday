@@ -48,4 +48,5 @@ operations:
     guidance:
       - Write or update failing tests before implementation code (TDD)
       - Do not implement behavior that no scenario requires
+      - Use the latest stable versions of the toolchain, frameworks, and libraries (Rust stable with the latest edition, newest crate and npm releases); add dependencies with `cargo add` / `pnpm add` without pinning old versions, and check crates.io or npm for the current release instead of relying on remembered version numbers
       - The backend doubles as the owner's Rust learning project: prefer plain, explicit code over macros and clever abstractions, and explain each Rust concept the first time a task uses it

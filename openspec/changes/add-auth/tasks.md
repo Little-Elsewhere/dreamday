@@ -4,7 +4,7 @@ Quy ước: task "test đỏ" chỉ viết test (phải chạy và FAIL vì chư
 
 ## 1. Khung backend mới bằng Rust (`apps/backend`)
 
-- [ ] 1.1 Cài Rust stable qua `rustup` (kèm `clippy`, `rustfmt`) và `sqlx-cli`; kiểm tra: `cargo --version`, `cargo sqlx --version` chạy được
+- [ ] 1.1 Cài công cụ trên macOS bằng Homebrew: `brew install rustup sqlx-cli`, thêm `$(brew --prefix rustup)/bin` vào `PATH` (formula `rustup` là keg-only), `rustup default stable` kèm `clippy`, `rustfmt`, `rust-analyzer`; thêm `rust-toolchain.toml` (`channel = "stable"`) để local và CI dùng cùng toolchain; kiểm tra: `cargo --version`, `cargo clippy --version`, `sqlx --version` chạy được
 - [ ] 1.2 Gắn tag `legacy` cho code cũ, đẩy tag lên remote, xóa code Python và cấu hình Python (pyproject, uv, ruff, pre-commit, …) khỏi nhánh làm việc (D1); kiểm tra: `git ls-remote --tags origin legacy` có kết quả và repo chỉ còn file chung (LICENSE, `.gitignore`, `.github/`)
 - [ ] 1.3 `cargo new` một crate, dựng axum theo D2: `src/main.rs`, `src/core/` (config từ biến môi trường, `AppState`, `AppError`, `Clock`), `GET /health`; kiểm tra: test `oneshot` gọi `/health` trả 200 bằng `cargo test`
 - [ ] 1.4 Kết nối PostgreSQL bằng `sqlx`, thư mục `migrations/` với migration gốc rỗng, chạy `sqlx::migrate!()` khi khởi động; kiểm tra: một `#[sqlx::test]` mẫu chạy xanh trên Postgres của Compose
