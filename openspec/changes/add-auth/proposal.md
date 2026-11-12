@@ -9,6 +9,7 @@ Mọi tính năng trip đều cần biết người dùng là ai. Lời mời qu
 ### Tài khoản (chỉ email + mật khẩu trong MVP)
 
 - Đăng ký bằng email + mật khẩu + **tên hiển thị (bắt buộc)**. Email được chuẩn hóa (trim + lowercase).
+- **Thông tin cá nhân (email, tên hiển thị) được mã hóa khi lưu trong database**; email được tra cứu và chống trùng bằng giá trị băm có khóa (HMAC). Mật khẩu hash bằng argon2id, token hash bằng SHA-256.
 - Mật khẩu 8–128 ký tự, có ít nhất 1 chữ hoa, 1 chữ thường, 1 chữ số và 1 ký tự đặc biệt.
 - **Bắt buộc xác thực email** trước khi đăng nhập và dùng app; gửi lại email xác thực được (có cooldown).
 - Đăng nhập, đăng xuất, quên mật khẩu (link đặt lại có hạn ngắn), đổi mật khẩu khi đã đăng nhập.
@@ -44,11 +45,13 @@ Mọi tính năng trip đều cần biết người dùng là ai. Lời mời qu
 
 - Là nền cho mọi change khác (`trips`, `trip-membership`, …).
 - Cần gửi email (SMTP; Mailpit khi chạy local) và lưu trữ file (S3-compatible; RustFS khi chạy local).
+- Thêm hai khóa bí mật `DATA_ENCRYPTION_KEY`, `DATA_HMAC_KEY` vào biến môi trường; mất khóa là mất email và tên đã lưu nên khóa prod phải được backup riêng.
 - Frontend: các màn hình auth, trang hồ sơ, upload avatar (server tự cắt vuông ở giữa).
 
 ## Out of scope (MVP)
 
 - Đăng nhập Google/Apple/khác, 2FA, xóa tài khoản, đổi email, quản lý danh sách thiết bị đăng nhập.
+- Đổi khóa mã hóa (key rotation) và quản lý khóa bằng KMS/Vault; định dạng lưu đã có byte phiên bản khóa để làm sau.
 
 ## Open questions
 

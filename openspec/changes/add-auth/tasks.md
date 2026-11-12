@@ -9,6 +9,7 @@ Quy ước: task "test đỏ" chỉ viết test (phải chạy và FAIL vì chư
 - [ ] 1.3 `cargo new` một crate, dựng axum theo D2: `src/main.rs`, `src/core/` (config từ biến môi trường, `AppState`, `AppError`, `Clock`), `GET /health`; kiểm tra: test `oneshot` gọi `/health` trả 200 bằng `cargo test`
 - [ ] 1.4 Kết nối PostgreSQL bằng `sqlx`, thư mục `migrations/` với migration gốc rỗng, chạy `sqlx::migrate!()` khi khởi động; kiểm tra: một `#[sqlx::test]` mẫu chạy xanh trên Postgres của Compose
 - [ ] 1.5 Dockerfile dev và prod (cache dependency bằng `cargo-chef`), CI chạy `cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test` với service Postgres, CD build image prod; kiểm tra: workflow CI xanh trên PR
+- [ ] 1.6 `src/core/crypto.rs` theo D15: `encrypt`/`decrypt` (AES-256-GCM, định dạng `key_version ‖ nonce ‖ ciphertext+tag`), `hmac` (HMAC-SHA256); đọc `DATA_ENCRYPTION_KEY`, `DATA_HMAC_KEY` vào config, thiếu hoặc sai độ dài thì không khởi động; kiểm tra: test mã hóa rồi giải mã ra đúng giá trị, hai lần mã hóa cho kết quả khác nhau, giải mã bằng khóa sai hoặc dữ liệu bị sửa thì lỗi, HMAC ổn định, config thiếu khóa thì báo lỗi
 
 ## 2. Khung frontend mới (`apps/frontend`)
 
@@ -18,16 +19,16 @@ Quy ước: task "test đỏ" chỉ viết test (phải chạy và FAIL vì chư
 
 ## 3. Hạ tầng dùng chung (repo gốc)
 
-- [ ] 3.1 Thêm/sửa biến môi trường cho SMTP, bucket công khai và riêng tư, `MEDIA_PUBLIC_URL`, `APP_URL`; chuyển service `backend` sang image Rust, bỏ service `backend-migrate` (D2), healthcheck không dùng Python; cập nhật `compose.yaml`, `nginx/`, `env/*/.env.example`, `README.md` cùng lúc; kiểm tra: `docker compose up` chạy đủ service, hai bucket tồn tại trên RustFS, file trong bucket công khai mở được qua `media.dreamday.local`
+- [ ] 3.1 Thêm/sửa biến môi trường cho SMTP, bucket công khai và riêng tư, `MEDIA_PUBLIC_URL`, `APP_URL`, `DATA_ENCRYPTION_KEY`, `DATA_HMAC_KEY` (README hướng dẫn sinh khóa và backup khóa prod theo D15); chuyển service `backend` sang image Rust, bỏ service `backend-migrate` (D2), healthcheck không dùng Python; cập nhật `compose.yaml`, `nginx/`, `env/*/.env.example`, `README.md` cùng lúc; kiểm tra: `docker compose up` chạy đủ service, hai bucket tồn tại trên RustFS, file trong bucket công khai mở được qua `media.dreamday.local`
 
 ## 4. `user-auth` — backend
 
-- [ ] 4.1 Migration SQL cho `users`, `sessions`, `email_tokens`, `login_throttles` (D4) và struct tương ứng; kiểm tra: `#[sqlx::test]` xác nhận DB chặn trùng `email` và `token_hash`
-- [ ] 4.2 Test đỏ đăng ký và kiểm tra dữ liệu: USER-AUTH-S1, S3–S12, S45 (gồm chuẩn hóa NFC theo D6, mã lỗi theo D14, email theo ngôn ngữ)
+- [ ] 4.1 Migration SQL cho `users`, `sessions`, `email_tokens`, `login_throttles` (D4) và struct tương ứng; kiểm tra: `#[sqlx::test]` xác nhận DB chặn trùng `email_hmac` và `token_hash`
+- [ ] 4.2 Test đỏ đăng ký và kiểm tra dữ liệu: USER-AUTH-S1, S3–S12, S45, S46 (gồm mã hóa email và tên hiển thị theo D15, chuẩn hóa NFC theo D6, mã lỗi theo D14, email theo ngôn ngữ)
 - [ ] 4.3 Cài đặt đăng ký, quy tắc mật khẩu, trait `Mailer` (bản `lettre` và bản giả cho test), gửi email bằng `tokio::spawn` (D7, D8) với mẫu `askama` `vi`/`en`; kiểm tra: test của 4.2 xanh
 - [ ] 4.4 Test đỏ xác thực email và gửi lại: USER-AUTH-S13–S19 (dùng `clock` cho 15 phút và 60 giây)
 - [ ] 4.5 Cài đặt phát/dùng/thu hồi `email_tokens` và cooldown; kiểm tra: test của 4.4 xanh
-- [ ] 4.6 Test đỏ đăng nhập và khóa: USER-AUTH-S20–S27, kèm test hai request sai song song vẫn đếm đủ 2 lần
+- [ ] 4.6 Test đỏ đăng nhập và khóa: USER-AUTH-S20–S27, S47, kèm test hai request sai song song vẫn đếm đủ 2 lần
 - [ ] 4.7 Cài đặt đăng nhập, hash giả cho email không tồn tại, bộ đếm `login_throttles` nguyên tử (D7); kiểm tra: test của 4.6 xanh
 - [ ] 4.8 Test đỏ phiên, đăng xuất, API cần đăng nhập: USER-AUTH-S28–S31, S42
 - [ ] 4.9 Cài đặt extractor `CurrentUser` (axum `FromRequestParts`) đọc `Authorization: Bearer`, gia hạn trượt, đăng xuất (D5, D10); kiểm tra: test của 4.8 xanh
@@ -38,7 +39,7 @@ Quy ước: task "test đỏ" chỉ viết test (phải chạy và FAIL vì chư
 
 ## 5. `user-profile` — backend
 
-- [ ] 5.1 Test đỏ xem và đổi tên hiển thị: USER-PROFILE-S1, S3–S5, và schema hồ sơ công khai chỉ có tên + avatar (phần backend của S14; S14 đầy đủ được kiểm tra lại trong `add-trips`)
+- [ ] 5.1 Test đỏ xem và đổi tên hiển thị: USER-PROFILE-S1, S3–S5, S15, và schema hồ sơ công khai chỉ có tên + avatar (phần backend của S14; S14 đầy đủ được kiểm tra lại trong `add-trips`)
 - [ ] 5.2 Cài đặt `GET/PATCH /me`; kiểm tra: test của 5.1 xanh
 - [ ] 5.3 Trait `Storage` với bản `aws-sdk-s3` (upload công khai, chuyển sang bucket riêng tư); kiểm tra: test tích hợp với RustFS upload rồi chuyển file thành công
 - [ ] 5.4 Test đỏ avatar: USER-PROFILE-S6–S12 (ảnh mẫu có GPS, ảnh 1200×800, file 6 MB, PDF đổi đuôi, URL cũ không còn mở được)
@@ -64,7 +65,7 @@ Quy ước: task "test đỏ" chỉ viết test (phải chạy và FAIL vì chư
 
 ## 8. Kiểm tra tích hợp
 
-- [ ] 8.1 Chạy toàn bộ test backend, Vitest và Playwright trên stack Compose đầy đủ; kiểm tra: tất cả xanh và mọi scenario USER-AUTH-S1–S45, USER-PROFILE-S1–S14 đều có ít nhất một test mang ID của nó (`grep` theo ID)
+- [ ] 8.1 Chạy toàn bộ test backend, Vitest và Playwright trên stack Compose đầy đủ; kiểm tra: tất cả xanh và mọi scenario USER-AUTH-S1–S47, USER-PROFILE-S1–S15 đều có ít nhất một test mang ID của nó (`grep` theo ID)
 
 ## Workflow follow-up
 

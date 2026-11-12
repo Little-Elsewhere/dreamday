@@ -45,14 +45,15 @@ Một crate duy nhất (không workspace). `src/auth/`, `src/profile/` mỗi nơ
 
 ### D4. Mô hình dữ liệu
 ```
-users           id, email (unique), password_hash, display_name, email_verified_at,
-                avatar_key, created_at, updated_at
+users           id, email_ciphertext, email_hmac (unique), password_hash,
+                display_name_ciphertext, email_verified_at, avatar_key, created_at, updated_at
 sessions        id, user_id, token_hash (unique), created_at, last_used_at,
                 expires_at, revoked_at
 email_tokens    id, user_id, purpose (verify_email | reset_password), token_hash (unique),
                 created_at, expires_at, consumed_at, revoked_at
-login_throttles email (PK, đã chuẩn hóa), failed_count, locked_until, updated_at
+login_throttles email_hmac (PK), failed_count, locked_until, updated_at
 ```
+- `email_ciphertext`, `email_hmac` và `display_name_ciphertext` là `bytea`, tính từ giá trị đã chuẩn hóa theo D15.
 - `users` chưa có `deleted_at` vì xóa tài khoản nằm ngoài phạm vi; thêm khi có change xóa tài khoản.
 - Một bảng `email_tokens` cho cả hai loại link vì chúng có cùng vòng đời (phát, hết hạn, dùng, bị thay). Phát link mới thì đặt `revoked_at` cho các link còn hiệu lực cùng `purpose`. Cooldown 60 giây kiểm tra bằng `created_at` của link gần nhất cùng `purpose`.
 - `login_throttles` khóa theo email, không theo `user_id`, để email không có tài khoản cũng bị đếm và khóa (USER-AUTH-S27).
@@ -104,6 +105,14 @@ Chữ cái đầu và màu nền tính ở frontend từ tên hiển thị và `
 ### D14. Lỗi API dạng mã, dịch ở frontend
 Backend trả lỗi dạng `{ "code": "...", "fields": { "<field>": ["<code>", …] } }`, ví dụ `password_missing_uppercase`. Frontend dịch mã sang tiếng Việt/Anh. Frontend cũng kiểm tra trước bằng zod để báo lỗi ngay khi gõ, nhưng backend luôn là nơi quyết định.
 
+### D15. Mã hóa thông tin cá nhân ở tầng ứng dụng
+Cột được mã hóa trong change này: `users.email_ciphertext`, `users.display_name_ciphertext`. Bảng `login_throttles` chỉ lưu `email_hmac`. Tên hiển thị không cần tra cứu hay unique nên không có cột HMAC.
+- Mã hóa bằng AES-256-GCM (crate `aes-gcm`), nonce 12 byte ngẫu nhiên cho mỗi lần mã hóa. Giá trị lưu: `key_version (1 byte) ‖ nonce (12 byte) ‖ ciphertext + tag (16 byte)`. Change này chỉ có `key_version = 1`; byte này để sau đổi khóa được mà không phải đổi định dạng.
+- Tra cứu và unique dùng `email_hmac = HMAC-SHA256(DATA_HMAC_KEY, email đã chuẩn hóa)` (crate `hmac` + `sha2`).
+- Hai khóa riêng `DATA_ENCRYPTION_KEY` và `DATA_HMAC_KEY` (32 byte, base64) đọc từ biến môi trường vào `AppState`; thiếu hoặc sai độ dài thì app không khởi động. Code nằm trong `src/core/crypto.rs` với ba hàm `encrypt`, `decrypt`, `hmac`.
+- Thay vì: `pgcrypto` → khóa phải đi vào câu SQL nên dễ lộ qua log; chỉ mã hóa at-rest → người đọc được DB đang chạy hoặc bản dump vẫn thấy email; mã hóa deterministic thay cho HMAC → lộ việc hai dòng cùng giá trị và ít thư viện Rust hỗ trợ.
+- Prod bật thêm mã hóa at-rest của nhà cung cấp DB (không cần code).
+
 ## Risks / Trade-offs
 
 - [Server dừng sau khi trả response nhưng trước khi gửi xong email] → Email bị mất; người dùng bấm gửi lại. Chấp nhận được ở MVP.
@@ -113,6 +122,9 @@ Backend trả lỗi dạng `{ "code": "...", "fields": { "<field>": ["<code>", �
 - [Build Rust trong Docker lâu] → Dùng `cargo-chef` để cache bước build dependency.
 - [Crate `webp` cần libwebp (C)] → Dùng feature build tĩnh đi kèm crate; nếu vướng, tạm encode lossless rồi xử lý sau (không ảnh hưởng spec).
 - [Mỗi request ghi vào bảng `sessions`] → Chấp nhận ở quy mô hiện tại; nếu thành điểm nghẽn thì chỉ gia hạn khi lần gia hạn trước đã quá một khoảng ngắn.
+- [Mất khóa mã hóa] → Mọi email đã lưu không giải mã được nữa. Khóa prod phải được backup riêng (ví dụ password manager của team) và ghi rõ trong `README.md`.
+- [Tên hiển thị đã mã hóa nên không tìm kiếm hay sắp xếp theo tên bằng SQL được] → Change này không cần; khi có tính năng cần (ví dụ tìm người dùng theo tên) thì quyết định trong change đó.
+- [Kẻ tấn công chiếm được server app] → Có cả DB lẫn khóa nên mã hóa không bảo vệ được; ngoài phạm vi của D15.
 - [Chuyển file avatar cũ thất bại sau khi DB đã cập nhật] → File cũ còn ở bucket công khai nhưng không còn được tham chiếu; ghi log để chuyển lại thủ công.
 
 ## Migration Plan

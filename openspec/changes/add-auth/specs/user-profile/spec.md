@@ -86,3 +86,12 @@ Người dùng SHALL gỡ avatar của mình. Người dùng không có avatar M
 - **WHEN** khách chưa đăng nhập xem một trip công khai
 - **THEN** tác giả hiển thị bằng tên hiển thị và avatar
 - **AND** phản hồi không chứa email của tác giả
+
+### Requirement: USER-PROFILE-R7 Tên hiển thị được mã hóa khi lưu
+Tên hiển thị MUST được mã hóa trước khi lưu vào database và MUST NOT xuất hiện ở dạng rõ trong bất kỳ bảng nào, kể cả khi tên được hiển thị công khai. Hệ thống MUST giải mã được tên để hiển thị ở mọi nơi spec cho phép.
+
+#### Scenario: USER-PROFILE-S15 Đăng ký và đổi tên không lưu tên dạng rõ
+- **GIVEN** khách đăng ký với tên hiển thị `Nguyễn Văn An`
+- **WHEN** người dùng đổi tên hiển thị thành `Bình Nguyễn`
+- **THEN** không bảng nào trong database chứa chuỗi `Nguyễn Văn An` hay `Bình Nguyễn`
+- **AND** trang hồ sơ của họ hiển thị `Bình Nguyễn`

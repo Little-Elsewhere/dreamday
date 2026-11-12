@@ -276,3 +276,17 @@ Email xác thực, đặt lại mật khẩu và thông báo tài khoản MUST �
 #### Scenario: USER-AUTH-S45 Đăng ký trên giao diện tiếng Việt
 - **WHEN** khách đăng ký khi giao diện đang ở tiếng Việt
 - **THEN** email xác thực được viết bằng tiếng Việt
+
+### Requirement: USER-AUTH-R16 Email được mã hóa khi lưu
+Email MUST được mã hóa trước khi lưu vào database và MUST NOT xuất hiện ở dạng rõ trong bất kỳ bảng nào, kể cả bảng đếm đăng nhập sai. Việc tra cứu và kiểm tra trùng email MUST dùng giá trị băm có khóa của email đã chuẩn hóa. Hệ thống MUST giải mã được email để gửi thư và hiển thị cho chủ tài khoản.
+
+#### Scenario: USER-AUTH-S46 Đăng ký không lưu email dạng rõ
+- **WHEN** khách đăng ký với email `an@example.com`
+- **THEN** không bảng nào trong database chứa chuỗi `an@example.com`
+- **AND** email xác thực vẫn được gửi tới `an@example.com`
+- **AND** đăng ký lại với `AN@example.com` được nhận ra là email đã có tài khoản (theo USER-AUTH-R2)
+
+#### Scenario: USER-AUTH-S47 Đếm đăng nhập sai không lưu email dạng rõ
+- **WHEN** ai đó đăng nhập sai với email `an@example.com`
+- **THEN** lần sai được đếm cho email đó (theo USER-AUTH-R7)
+- **AND** không bảng nào trong database chứa chuỗi `an@example.com`
