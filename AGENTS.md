@@ -17,7 +17,3 @@ Orchestration and specs repo: it pins the `apps/frontend` and `apps/backend` sub
 - When changing a service, port, path, or env key, update `compose.yaml`, `nginx/`, `env/*/.env.example`, and `README.md` together.
 - `env/*/.env` feed the root stack; `apps/*/.env` feed each submodule's standalone stack. Never commit either; update the matching `.env.example` when keys change.
 - Inside Docker, services reach each other by Compose service name, not `localhost`.
-
-## Docs
-
-`docs/` describes the legacy implementation's FE↔BE contracts (API, ERD); use it as reference only, not as a spec.
