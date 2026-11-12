@@ -31,11 +31,44 @@ Code cũ được gắn tag `legacy` trên remote rồi xóa khỏi nhánh `deve
 - Thay vì: viết song song trong thư mục mới → hai bộ code cùng tồn tại, dễ nhầm và dễ "bê" code cũ sang. Tag giữ lại được mọi thứ để tham khảo.
 
 ### D2. Backend: một crate, tổ chức theo feature
-Một crate duy nhất (không workspace). `src/auth/`, `src/profile/` mỗi nơi gồm `routes.rs` (handler axum), `service.rs` (logic + truy vấn sqlx), `model.rs` (struct dữ liệu); phần dùng chung ở `src/core/` (config, `AppState`, `AppError`, clock, mailer, storage).
-- `AppError` là một `enum` implement `IntoResponse`, trả lỗi dạng D14. Handler trả `Result<_, AppError>`.
+Một crate duy nhất (không workspace), mỗi tính năng một thư mục, phần dùng chung ở `src/shared/`.
+```
+apps/backend/
+├── Cargo.toml
+├── migrations/               file SQL (từ task 1.4)
+├── src/
+│   ├── main.rs               chỉ khởi động: log, Config, AppState, mở cổng
+│   ├── lib.rs                khai báo module + build_router(state)
+│   ├── health.rs             GET /health
+│   ├── shared/
+│   │   ├── mod.rs
+│   │   ├── config.rs         Config::from_env()
+│   │   ├── state.rs          AppState
+│   │   ├── error.rs          AppError
+│   │   ├── clock.rs          trait Clock, SystemClock, FakeClock
+│   │   ├── crypto.rs         (task 1.6)
+│   │   ├── mailer.rs         (task 4.3)
+│   │   └── storage.rs        (task 5.3)
+│   ├── auth/                 routes.rs, service.rs, model.rs (nhóm task 4)
+│   └── profile/              routes.rs, service.rs, model.rs (nhóm task 5)
+└── tests/
+    ├── common/mod.rs         dựng AppState giả cho test
+    └── health.rs
+```
+- **`main.rs` mỏng, logic trong `lib.rs`.** `main.rs` chỉ khởi động; module và hàm `build_router(state)` nằm trong `src/lib.rs` để test trong `tests/` dựng được router với state giả (test tích hợp chỉ import được thư viện, không import được `main.rs`).
+- **Thư mục dùng chung tên `shared`, không phải `core`.** Rust có sẵn crate `core`; một module cùng tên ở gốc crate làm `use core::…` thành mơ hồ và gây lỗi khó hiểu cho người mới.
+- **Mỗi module tính năng có ba file.** `routes.rs` chứa handler axum và một hàm `pub fn router() -> Router<AppState>`; `service.rs` chứa logic và truy vấn sqlx; `model.rs` chứa struct dữ liệu. `lib.rs` gộp các router bằng `merge`, nên thêm tính năng chỉ là thêm một thư mục và một dòng trong `build_router`.
+- **Ranh giới module.** Mỗi module chỉ truy vấn bảng của chính nó; module khác lấy dữ liệu qua hàm công khai trong `service.rs` của module đó, không viết SQL vào bảng của nhau; `src/shared/` không phụ thuộc module tính năng nào. Lý do: thêm tính năng là thêm thư mục mới, và sau này tách một module thành crate hay service riêng chỉ là di chuyển file.
+- **`AppState`** là struct `Clone` truyền cho handler qua extractor `State` của axum. Task 1.3 có `config: Arc<Config>` và `clock: Arc<dyn Clock>`; các task sau thêm `db: PgPool`, `mailer`, `storage`, khóa mã hóa. Dịch vụ ngoài dùng `Arc<dyn Trait>` thay vì generic (`AppState<C: Clock>`) để chữ ký hàm ngắn và dễ đọc; chi phí gọi động không đáng kể so với I/O.
+- **`Config`** đọc biến môi trường một lần trong `Config::from_env()` bằng `std::env::var`, trả `Result`; thiếu hoặc sai giá trị thì `main` in lỗi nêu tên biến và thoát. Không dùng crate config. Task 1.3 chỉ có `APP_PORT` (mặc định `8000`); app lắng nghe ở `0.0.0.0` để chạy được trong Docker.
+- **`AppError`** là một `enum` (dùng `thiserror`) implement `IntoResponse`, trả lỗi dạng D14. Handler trả `Result<_, AppError>` và dùng `?`. Lỗi không lường trước (DB, I/O) thành biến thể `Internal`: ghi log chi tiết bằng `tracing`, chỉ trả mã `internal_error` cho client. Biến thể được thêm dần theo scenario.
+- **`Clock`** có một hàm `now()` trả `DateTime<Utc>` của `chrono` (bật feature `chrono` của sqlx từ task 1.4). `FakeClock` (chỉnh được giờ) nằm trong `src/shared/clock.rs` chứ không trong `#[cfg(test)]`, vì test trong `tests/` không thấy được code `#[cfg(test)]` của thư viện.
+- **`GET /health`** trả `200` với `{ "status": "ok" }` và không chạm DB; chỉ dùng cho healthcheck của Compose.
+- **Log** bằng `tracing` + `tracing-subscriber`, khởi tạo trong `main.rs`.
+- **Dependency của task 1.3:** `axum`, `tokio`, `serde`, `serde_json`, `thiserror`, `tracing`, `tracing-subscriber`, `chrono`; dev: `tower` (cho `oneshot`), `http-body-util` (đọc body trong test). Crate khác thêm ở task dùng tới nó.
 - Truy vấn dùng `sqlx::query!`/`query_as!` để SQL được kiểm tra với schema lúc build; `.sqlx/` (cache truy vấn) được commit để build Docker/CI không cần DB.
 - Migration là file SQL trong `migrations/`, chạy bằng `sqlx::migrate!()` khi app khởi động (sqlx tự giữ advisory lock); không cần service migrate riêng.
-- Thay vì: ORM (SeaORM, Diesel) → thêm một lớp phải học, che mất SQL; tầng repository như code cũ → thêm một tầng chỉ để chuyển tiếp.
+- Thay vì: ORM (SeaORM, Diesel) → thêm một lớp phải học, che mất SQL; tầng repository như code cũ → thêm một tầng chỉ để chuyển tiếp; workspace nhiều crate → chưa có vấn đề thời gian build để giải quyết; nhiều service (microservices) → một người làm, chưa có người dùng, nên chi phí vận hành và gọi qua mạng lớn hơn lợi ích.
 
 ### D3. Test backend chạy trên PostgreSQL thật
 - `#[sqlx::test]` tạo một database riêng cho mỗi test trên Postgres của Compose và chạy sẵn migration; test gọi thẳng `Router` bằng `tower::ServiceExt::oneshot`, không mở cổng HTTP.
@@ -109,7 +142,7 @@ Backend trả lỗi dạng `{ "code": "...", "fields": { "<field>": ["<code>", �
 Cột được mã hóa trong change này: `users.email_ciphertext`, `users.display_name_ciphertext`. Bảng `login_throttles` chỉ lưu `email_hmac`. Tên hiển thị không cần tra cứu hay unique nên không có cột HMAC.
 - Mã hóa bằng AES-256-GCM (crate `aes-gcm`), nonce 12 byte ngẫu nhiên cho mỗi lần mã hóa. Giá trị lưu: `key_version (1 byte) ‖ nonce (12 byte) ‖ ciphertext + tag (16 byte)`. Change này chỉ có `key_version = 1`; byte này để sau đổi khóa được mà không phải đổi định dạng.
 - Tra cứu và unique dùng `email_hmac = HMAC-SHA256(DATA_HMAC_KEY, email đã chuẩn hóa)` (crate `hmac` + `sha2`).
-- Hai khóa riêng `DATA_ENCRYPTION_KEY` và `DATA_HMAC_KEY` (32 byte, base64) đọc từ biến môi trường vào `AppState`; thiếu hoặc sai độ dài thì app không khởi động. Code nằm trong `src/core/crypto.rs` với ba hàm `encrypt`, `decrypt`, `hmac`.
+- Hai khóa riêng `DATA_ENCRYPTION_KEY` và `DATA_HMAC_KEY` (32 byte, base64) đọc từ biến môi trường vào `AppState`; thiếu hoặc sai độ dài thì app không khởi động. Code nằm trong `src/shared/crypto.rs` với ba hàm `encrypt`, `decrypt`, `hmac`.
 - Thay vì: `pgcrypto` → khóa phải đi vào câu SQL nên dễ lộ qua log; chỉ mã hóa at-rest → người đọc được DB đang chạy hoặc bản dump vẫn thấy email; mã hóa deterministic thay cho HMAC → lộ việc hai dòng cùng giá trị và ít thư viện Rust hỗ trợ.
 - Prod bật thêm mã hóa at-rest của nhà cung cấp DB (không cần code).
 
