@@ -35,6 +35,11 @@ context: |
     design lists its encrypted columns.
   - UI: mobile-first responsive for mobile, tablet, and laptop; Be Vietnam Pro font; all UI copy
     and date/number/currency formatting localized in English and Vietnamese.
+  - Backend module boundaries: one deployable backend organized as feature modules. A module
+    queries only its own tables; other modules get its data by calling the public functions of
+    its service, never by writing SQL against its tables. Shared code never depends on a
+    feature module. External services (email, storage, maps, routing, AI) are reached through a
+    trait held in the app state, with a fake implementation for tests.
   - YAGNI: specify only what the current change needs; put "later" ideas in Out of scope.
 
 rules:
