@@ -7,21 +7,21 @@ Chuẩn bị một chuyến đi có nhiều việc cần làm và cần phân c�
 ## What Changes
 
 - Mỗi trip có **nhiều checklist chung của nhóm** (không có checklist cá nhân trong MVP).
-- Mỗi checklist có tên và nhiều mục; mỗi mục có tên, trạng thái đã xong, ghi chú (tùy chọn).
+- Mỗi checklist có tên và nhiều mục; mỗi mục có tên, trạng thái đã xong, ghi chú (tùy chọn). **Ghi chú luôn được mã hóa khi lưu**; các trường khác là nội dung trip, để dạng rõ.
 - Mỗi mục **có thể giao cho 1 thành viên** của trip.
 - Khi thành viên **bị xóa khỏi trip hoặc tự rời trip**, các mục đang giao cho họ trở về **không giao cho ai**. Khôi phục hoặc mời lại thành viên đó không tự giao lại các mục.
 - Thứ tự **các checklist** và thứ tự **mục trong mỗi checklist** sắp xếp bằng **kéo thả** (owner/member), hoạt động cả trên cảm ứng.
-- Owner và member tạo/sửa/xóa checklist và mục; viewer chỉ xem.
+- Owner và member tạo/sửa/xóa checklist và mục; viewer chỉ xem khi trip public.
 - Xóa checklist hoặc mục là **soft delete**; ngay sau khi xóa có nút **"Hoàn tác"** để khôi phục trên UI.
 
 ### Ranh giới dữ liệu
 
-| Dữ liệu | Owner/Member | Viewer | Người ngoài (trip public) |
-|---|---|---|---|
-| Tên danh sách, tên mục | ✓ | ✓ | ✓ |
-| Trạng thái đã xong | ✓ | ✓ | ✓ |
-| Người được giao, người đánh dấu | ✓ | ✓ | ✗ |
-| Ghi chú của mục | ✓ | ✓ | ✗ |
+| Dữ liệu | Owner/Member | Viewer (trip public) |
+|---|---|---|
+| Tên danh sách, tên mục | ✓ | ✓ |
+| Trạng thái đã xong | ✓ | ✓ |
+| Người được giao, người đánh dấu | ✓ | ✗ |
+| Ghi chú của mục | ✓ | ✗ |
 
 Ghi chú tự do luôn bị ẩn khỏi góc nhìn công khai vì không thể tự nhận biết thông tin nhạy cảm bên trong.
 

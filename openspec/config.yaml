@@ -10,8 +10,10 @@ context: |
   auth tokens; Next.js calls the backend server-side.
 
   System-wide rules:
-  - Soft delete only, never hard delete. Every deletable record has deleted_at; deleted records
-    are restorable from the UI. No automatic purge. Children are not cascade-deleted: a deleted
+  - Soft delete only, never hard delete. Every deletable record has deleted_at. Deleted trips are
+    restorable from the owner's trash in the UI; other deleted records (e.g. schedule items,
+    checklists, expenses, expense categories) are restorable in the UI only through an Undo shown right after the
+    deletion, and stay in the database afterwards. No automatic purge. Children are not cascade-deleted: a deleted
     parent makes them inaccessible, and restoring the parent brings them back intact. Technical
     records (sessions, tokens, invitations) are marked revoked/consumed/expired instead.
     Unique constraints apply to non-deleted rows only.
@@ -26,13 +28,13 @@ context: |
     Uploads: JPEG/PNG/WebP, max 5 MB, format checked by content, re-encoded to WebP with metadata stripped.
   - Emails are shown only to their owner and to trip owners; never to other members or publicly.
   - Personal information about users (e.g. email, names, date of birth, address, phone number) and
-    private content (e.g. private notes) is encrypted by the backend before it is stored:
+    private content (every free-text note, always) is encrypted by the backend before it is stored:
     AES-256-GCM, a random nonce per value, stored as key_version ‖ nonce ‖ ciphertext+tag, keys
     from env. Personal information is encrypted even when it is shown publicly (e.g. display
     names). A column that must be looked up or kept unique also stores a keyed HMAC-SHA256 of its
     normalized value. Passwords are hashed with argon2id and random tokens with SHA-256, never
-    encrypted. Other public content (e.g. public trip content) stays in plain text. Each change's
-    design lists its encrypted columns.
+    encrypted. Trip content (e.g. trip names, descriptions, item titles) stays in plain text whether
+    the trip is private or public. Each change's design lists its encrypted columns.
   - UI: mobile-first responsive for mobile, tablet, and laptop; Be Vietnam Pro font; all UI copy
     and date/number/currency formatting localized in English and Vietnamese.
   - Backend module boundaries: one deployable backend organized as feature modules. A module
@@ -49,7 +51,7 @@ rules:
   specs:
     - Write requirement and scenario prose in Vietnamese; keep SHALL/MUST, WHEN/THEN keywords
     - Give every requirement a stable ID (<CAPABILITY>-R<n>) and every scenario an ID (<CAPABILITY>-S<n>); never reuse IDs
-    - Cover permission (owner/member/viewer/public) and data-boundary scenarios for every read and write
+    - Cover permission (owner/member/viewer) and data-boundary scenarios for every read and write; viewer means any non-member of the trip, signed in or guest (not a trip role), and both get the same public view
   design:
     - Only record decisions that are not obvious from the specs; skip design.md when there are none
   tasks:
