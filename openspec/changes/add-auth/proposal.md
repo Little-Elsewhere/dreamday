@@ -13,7 +13,7 @@ Mọi tính năng trip đều cần biết người dùng là ai. Lời mời qu
 - Mật khẩu 8–128 ký tự, có ít nhất 1 chữ hoa, 1 chữ thường, 1 chữ số và 1 ký tự đặc biệt.
 - **Bắt buộc xác thực email** trước khi đăng nhập và dùng app; gửi lại email xác thực được (có cooldown).
 - Đăng nhập, đăng xuất, quên mật khẩu (link đặt lại có hạn ngắn), đổi mật khẩu khi đã đăng nhập.
-- Đặt lại / đổi mật khẩu thì **mọi phiên đăng nhập khác bị đăng xuất**.
+- Đặt lại mật khẩu thì **mọi phiên đăng nhập bị đăng xuất**; đổi mật khẩu khi đã đăng nhập thì **mọi phiên khác bị đăng xuất** (giữ phiên hiện tại).
 - **Giới hạn đăng nhập sai theo từng tài khoản** (không giới hạn theo IP): sai **5 lần liên tiếp** thì **khóa đăng nhập 30 phút** và báo rõ cho người dùng; đăng nhập đúng thì đếm lại từ 0. **Đặt lại mật khẩu qua email mở khóa ngay** (chống việc người khác cố tình khóa tài khoản).
 - Đăng ký, quên mật khẩu và gửi lại email xác thực **không tiết lộ email có tồn tại hay không** (phản hồi giống hệt nhau). Đăng ký bằng email đã có tài khoản thì gửi email báo "bạn đã có tài khoản" kèm link đăng nhập / quên mật khẩu.
 - Link xác thực email và link đặt lại mật khẩu dùng một lần, **hết hạn sau 15 phút**; gửi lại tối đa **1 lần mỗi 60 giây**, link mới vô hiệu link cũ.

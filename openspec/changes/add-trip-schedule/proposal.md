@@ -11,7 +11,7 @@ Nhóm cần lên lịch trình từng ngày của chuyến đi (ngày 1 đi đâ
 - Hai loại item:
   - **Có giờ**: bắt đầu = ngày + giờ địa phương + múi giờ IANA của nơi diễn ra; kết thúc (tùy chọn) có **múi giờ riêng** (mặc định bằng múi giờ bắt đầu), ví dụ bay HAN 23:30 (Asia/Ho_Chi_Minh) → NRT 06:30 (Asia/Tokyo).
   - **Cả ngày**: chỉ có ngày bắt đầu/kết thúc, **có thể kéo dài nhiều ngày** (ví dụ "Ngày 1: Hà Nội", "Lưu trú khách sạn A, ngày 1–3").
-- Thuộc tính: tiêu đề, loại (bay, di chuyển, lưu trú, hoạt động, ăn uống, khác), địa điểm (text), ghi chú.
+- Thuộc tính: tiêu đề, loại (bay, di chuyển, lưu trú, hoạt động, ăn uống, khác), địa điểm (text), ghi chú. **Ghi chú luôn được mã hóa khi lưu**; các trường khác là nội dung trip, để dạng rõ.
 - Lưu tên múi giờ IANA (ví dụ `Asia/Tokyo`), không lưu offset cố định, để đúng với giờ mùa hè (DST). Backend tính sẵn thời điểm UTC của item có giờ để sắp xếp và kiểm tra.
 - Múi giờ mặc định của item mới: múi giờ của item trước, nếu không có thì múi giờ mặc định của trip. Chọn múi giờ bằng ô tìm kiếm theo thành phố.
 - Kiểm tra: thời điểm kết thúc (UTC) phải sau thời điểm bắt đầu; item cả ngày có ngày kết thúc ≥ ngày bắt đầu. Item nằm ngoài khoảng ngày của trip **được phép, chỉ cảnh báo**.
@@ -26,15 +26,15 @@ Nhóm cần lên lịch trình từng ngày của chuyến đi (ngày 1 đi đâ
   - Bấm ô trống để tạo item, bấm item để sửa qua hộp thoại.
   - **Kéo thả để dời** item và **kéo cạnh để đổi thời lượng**, hoạt động cả trên cảm ứng (nhấn giữ rồi kéo).
   - Khi dời/đổi thời lượng, item **giữ nguyên múi giờ** của nó; chỉ giờ địa phương thay đổi. Kéo cạnh của item có múi giờ kết thúc riêng thì đổi giờ kết thúc theo múi giờ kết thúc.
-- Viewer và người ngoài (trip public) chỉ xem, không kéo thả.
+- Viewer (trip public) chỉ xem, không kéo thả.
 - Xóa item là **soft delete**; ngay sau khi xóa có nút **"Hoàn tác"** để khôi phục trên UI.
 
 ### Ranh giới dữ liệu
 
-| Dữ liệu | Owner/Member | Viewer | Người ngoài (trip public) |
-|---|---|---|---|
-| Tiêu đề, loại, thời gian, múi giờ, địa điểm | ✓ | ✓ | ✓ |
-| Ghi chú | ✓ | ✓ | ✗ |
+| Dữ liệu | Owner/Member | Viewer (trip public) |
+|---|---|---|
+| Tiêu đề, loại, thời gian, múi giờ, địa điểm | ✓ | ✓ |
+| Ghi chú | ✓ | ✗ |
 
 ## Capabilities
 
@@ -55,3 +55,7 @@ Nhóm cần lên lịch trình từng ngày của chuyến đi (ngày 1 đi đâ
 - Gom item sắp tới của nhiều trip vào trang tổng quan.
 - Bản đồ, tìm kiếm địa điểm, nhắc nhở/thông báo, đồng bộ lịch (iCal/Google Calendar), sự kiện lặp lại.
 - Chế độ xem lưới theo một múi giờ cố định.
+
+## Open questions
+
+- (không còn)

@@ -13,7 +13,7 @@ Quy ước: task "test đỏ" chỉ viết test (phải chạy và FAIL vì chư
 
 ## 2. Khung frontend mới (`apps/frontend`)
 
-- [ ] 2.1 Gắn tag `legacy`, đẩy tag, xóa code cũ khỏi nhánh làm việc (D1); kiểm tra như 1.1
+- [ ] 2.1 Gắn tag `legacy`, đẩy tag, xóa code cũ khỏi nhánh làm việc (D1); kiểm tra như 1.2
 - [ ] 2.2 Dựng khung Next.js App Router: next-intl (`vi`, `en`), font Be Vietnam Pro, shadcn/ui, layout responsive tối thiểu; kiểm tra: `pnpm build` thành công và `/vi`, `/en` hiển thị đúng ngôn ngữ
 - [ ] 2.3 Hạ tầng test: Vitest cho logic thuần, Playwright với 3 viewport (mobile, tablet, laptop) và helper đọc email từ API Mailpit; kiểm tra: một test mẫu của mỗi loại chạy xanh
 

@@ -8,6 +8,7 @@ Nhóm bạn đi du lịch (kể cả đi nhiều quốc gia, lệch múi giờ) 
 
 - Người dùng đã đăng nhập tạo trip; người tạo trở thành **owner**.
 - Thông tin trip: tên, điểm đến (text), mô tả, ngày bắt đầu/kết thúc dạng **ngày theo lịch** (không có giờ), **múi giờ mặc định** (IANA, gợi ý cho schedule item mới), **một loại tiền tệ** cho cả trip.
+- Nội dung trip (tên, điểm đến, mô tả) **để dạng rõ, không mã hóa**, kể cả khi trip private, nên đổi visibility không phải mã hóa lại dữ liệu.
 - Loại tiền tệ chọn khi tạo trip; **bị khóa sau khi trip có khoản chi đầu tiên**.
 - `visibility`: `private` (mặc định) hoặc `public`. Không có trạng thái nháp/lifecycle riêng; chỉ owner đổi visibility.
 - Trip public có **URL công khai ổn định**, xem được khi chưa đăng nhập, có metadata (tiêu đề, mô tả) để chia sẻ link đẹp.
@@ -27,7 +28,7 @@ Nhóm bạn đi du lịch (kể cả đi nhiều quốc gia, lệch múi giờ) 
 
 ## Impact
 
-- Phụ thuộc: `auth` và hồ sơ người dùng tối thiểu (tên hiển thị, avatar) — chưa có change, cần phân tích tiếp.
+- Phụ thuộc `user-auth` (đăng nhập) và `user-profile` (tên hiển thị, avatar của tác giả) từ change `add-auth`.
 - Là nền cho `trip-membership`, `trip-schedule`, `trip-checklists`, `trip-expenses`.
 - Backend: bảng trips, API trip nội bộ + API trip công khai. Frontend: tạo/sửa trip, trang trip công khai (SEO, metadata).
 
@@ -36,3 +37,7 @@ Nhóm bạn đi du lịch (kể cả đi nhiều quốc gia, lệch múi giờ) 
 - Feed khám phá, tìm kiếm trip public, follow/like/bình luận.
 - Sao chép trip public làm mẫu (mô hình ngày + giờ địa phương đã cho phép dời ngày về sau).
 - Bản đồ, nhiều loại tiền / quy đổi tỉ giá, nhiều ảnh / album.
+
+## Open questions
+
+- (không còn)
