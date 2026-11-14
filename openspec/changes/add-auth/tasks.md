@@ -23,15 +23,15 @@ Quy ước: task "test đỏ" chỉ viết test (phải chạy và FAIL vì chư
 
 ## 4. `user-auth` — backend
 
-- [ ] 4.1 Migration SQL cho `users`, `sessions`, `email_tokens`, `login_throttles` (D4) và struct tương ứng; kiểm tra: `#[sqlx::test]` xác nhận DB chặn trùng `email_hmac` và `token_hash`
+- [ ] 4.1 Migration SQL cho `users`, `sessions`, `email_tokens`, `login_throttles` (D4) và struct tương ứng trong `auth/model.rs` (module `auth/` theo D2: file con private, `mod.rs` re-export); kiểm tra: `#[sqlx::test]` xác nhận DB chặn trùng `email_hmac` và `token_hash`
 - [ ] 4.2 Test đỏ đăng ký và kiểm tra dữ liệu: USER-AUTH-S1, S3–S12, S45, S46 (gồm mã hóa email và tên hiển thị theo D15, chuẩn hóa NFC theo D6, mã lỗi theo D14, email theo ngôn ngữ)
-- [ ] 4.3 Cài đặt đăng ký, quy tắc mật khẩu, trait `Mailer` (bản `lettre` và bản giả cho test), gửi email bằng `tokio::spawn` (D7, D8) với mẫu `askama` `vi`/`en`; kiểm tra: test của 4.2 xanh
+- [ ] 4.3 Cài đặt đăng ký (request/response trong `auth/dto.rs`), quy tắc mật khẩu, trait `Mailer` (bản `lettre` và bản giả cho test), gửi email bằng `tokio::spawn` (D7, D8) với mẫu `askama` `vi`/`en`; kiểm tra: test của 4.2 xanh
 - [ ] 4.4 Test đỏ xác thực email và gửi lại: USER-AUTH-S13–S19 (dùng `clock` cho 15 phút và 60 giây)
 - [ ] 4.5 Cài đặt phát/dùng/thu hồi `email_tokens` và cooldown; kiểm tra: test của 4.4 xanh
 - [ ] 4.6 Test đỏ đăng nhập và khóa: USER-AUTH-S20–S27, S47, kèm test hai request sai song song vẫn đếm đủ 2 lần
 - [ ] 4.7 Cài đặt đăng nhập, hash giả cho email không tồn tại, bộ đếm `login_throttles` nguyên tử (D7); kiểm tra: test của 4.6 xanh
 - [ ] 4.8 Test đỏ phiên, đăng xuất, API cần đăng nhập: USER-AUTH-S28–S31, S42
-- [ ] 4.9 Cài đặt extractor `CurrentUser` (axum `FromRequestParts`) đọc `Authorization: Bearer`, gia hạn trượt, đăng xuất (D5, D10); kiểm tra: test của 4.8 xanh
+- [ ] 4.9 Cài đặt extractor `CurrentUser` (axum `FromRequestParts`) đọc `Authorization: Bearer`, re-export qua `auth/mod.rs` cho module khác dùng, gia hạn trượt, đăng xuất (D5, D10); kiểm tra: test của 4.8 xanh
 - [ ] 4.10 Test đỏ quên và đặt lại mật khẩu: USER-AUTH-S32–S38
 - [ ] 4.11 Cài đặt quên/đặt lại mật khẩu (thu hồi phiên, mở khóa, xác thực email); kiểm tra: test của 4.10 xanh
 - [ ] 4.12 Test đỏ đổi mật khẩu: USER-AUTH-S39–S40
@@ -39,7 +39,7 @@ Quy ước: task "test đỏ" chỉ viết test (phải chạy và FAIL vì chư
 
 ## 5. `user-profile` — backend
 
-- [ ] 5.1 Test đỏ xem và đổi tên hiển thị: USER-PROFILE-S1, S3–S5, S15, và schema hồ sơ công khai chỉ có tên + avatar (phần backend của S14; S14 đầy đủ được kiểm tra lại trong `add-trips`)
+- [ ] 5.1 Test đỏ xem và đổi tên hiển thị: USER-PROFILE-S1, S3–S5, S15, và schema hồ sơ công khai (`PublicProfile` trong `profile/dto.rs`) chỉ có tên + avatar (phần backend của S14; S14 đầy đủ được kiểm tra lại trong `add-trips`)
 - [ ] 5.2 Cài đặt `GET/PATCH /me`; kiểm tra: test của 5.1 xanh
 - [ ] 5.3 Trait `Storage` với bản `aws-sdk-s3` (upload công khai, chuyển sang bucket riêng tư); kiểm tra: test tích hợp với RustFS upload rồi chuyển file thành công
 - [ ] 5.4 Test đỏ avatar: USER-PROFILE-S6–S12 (ảnh mẫu có GPS, ảnh 1200×800, file 6 MB, PDF đổi đuôi, URL cũ không còn mở được)

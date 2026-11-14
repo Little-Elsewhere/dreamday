@@ -49,16 +49,17 @@ apps/backend/
 │   │   ├── crypto.rs         (task 1.6)
 │   │   ├── mailer.rs         (task 4.3)
 │   │   └── storage.rs        (task 5.3)
-│   ├── auth/                 routes.rs, service.rs, model.rs (nhóm task 4)
-│   └── profile/              routes.rs, service.rs, model.rs (nhóm task 5)
+│   ├── auth/                 mod.rs, model.rs, dto.rs, service.rs, routes.rs (nhóm task 4)
+│   └── profile/              mod.rs, model.rs, dto.rs, service.rs, routes.rs (nhóm task 5)
 └── tests/
     ├── common/mod.rs         dựng AppState giả cho test
     └── health.rs
 ```
 - **`main.rs` mỏng, logic trong `lib.rs`.** `main.rs` chỉ khởi động; module và hàm `build_router(state)` nằm trong `src/lib.rs` để test trong `tests/` dựng được router với state giả (test tích hợp chỉ import được thư viện, không import được `main.rs`).
 - **Thư mục dùng chung tên `shared`, không phải `core`.** Rust có sẵn crate `core`; một module cùng tên ở gốc crate làm `use core::…` thành mơ hồ và gây lỗi khó hiểu cho người mới.
-- **Mỗi module tính năng có ba file.** `routes.rs` chứa handler axum và một hàm `pub fn router() -> Router<AppState>`; `service.rs` chứa logic và truy vấn sqlx; `model.rs` chứa struct dữ liệu. `lib.rs` gộp các router bằng `merge`, nên thêm tính năng chỉ là thêm một thư mục và một dòng trong `build_router`.
-- **Ranh giới module.** Mỗi module chỉ truy vấn bảng của chính nó; module khác lấy dữ liệu qua hàm công khai trong `service.rs` của module đó, không viết SQL vào bảng của nhau; `src/shared/` không phụ thuộc module tính năng nào. Lý do: thêm tính năng là thêm thư mục mới, và sau này tách một module thành crate hay service riêng chỉ là di chuyển file.
+- **Mỗi module tính năng có năm file.** `mod.rs` khai báo bốn file còn lại là module private và chỉ `pub use` những gì module khác được dùng (ví dụ `router`, extractor `CurrentUser`); `model.rs` chứa entity, hàng DB và enum nghiệp vụ; `dto.rs` chứa struct request/response của API, trong đó góc nhìn công khai luôn là struct riêng (ví dụ `PublicProfile` tách khỏi hồ sơ có email); `service.rs` chứa logic và truy vấn sqlx; `routes.rs` chứa handler axum (nhận và trả dto) và hàm `router() -> Router<AppState>`. `lib.rs` gộp các router bằng `merge`, nên thêm tính năng chỉ là thêm một thư mục và một dòng trong `build_router`.
+- **Type đặt theo tính năng, không gom chung cả crate.** Type dùng chung nhiều module nằm trong `src/shared/`. Ngoại lệ: type private, chỉ một hàm dùng và thuộc phần hạ tầng (ví dụ `HealthBody` trong `health.rs`, `ErrorBody` trong `shared/error.rs`) nằm ngay cạnh hàm đó. Lý do: chuyển type sang file khác buộc phải nâng nó lên `pub(crate)`, lộ chi tiết nội bộ mà không được lợi gì.
+- **Ranh giới module.** Mỗi module chỉ truy vấn bảng của chính nó; module khác lấy dữ liệu qua hàm công khai trong `service.rs` của module đó, không viết SQL vào bảng của nhau; `src/shared/` không phụ thuộc module tính năng nào. Ranh giới này do compiler kiểm tra: file con của một tính năng là private, nên module khác chỉ gọi được những gì `mod.rs` của nó re-export. Lý do: thêm tính năng là thêm thư mục mới, và sau này tách một module thành crate hay service riêng chỉ là di chuyển file.
 - **`AppState`** là struct `Clone` truyền cho handler qua extractor `State` của axum. Task 1.3 có `config: Arc<Config>` và `clock: Arc<dyn Clock>`; các task sau thêm `db: PgPool`, `mailer`, `storage`, khóa mã hóa. Dịch vụ ngoài dùng `Arc<dyn Trait>` thay vì generic (`AppState<C: Clock>`) để chữ ký hàm ngắn và dễ đọc; chi phí gọi động không đáng kể so với I/O.
 - **`Config`** đọc biến môi trường một lần trong `Config::from_env()` bằng `std::env::var`, trả `Result`; thiếu hoặc sai giá trị thì `main` in lỗi nêu tên biến và thoát. Không dùng crate config. Task 1.3 chỉ có `APP_PORT` (mặc định `8000`); app lắng nghe ở `0.0.0.0` để chạy được trong Docker.
 - **`AppError`** là một `enum` (dùng `thiserror`) implement `IntoResponse`, trả lỗi dạng D14. Handler trả `Result<_, AppError>` và dùng `?`. Lỗi không lường trước (DB, I/O) thành biến thể `Internal`: ghi log chi tiết bằng `tracing`, chỉ trả mã `internal_error` cho client. Biến thể được thêm dần theo scenario.
@@ -68,12 +69,13 @@ apps/backend/
 - **Dependency của task 1.3:** `axum`, `tokio`, `serde`, `serde_json`, `thiserror`, `tracing`, `tracing-subscriber`, `chrono`; dev: `tower` (cho `oneshot`), `http-body-util` (đọc body trong test). Crate khác thêm ở task dùng tới nó.
 - Truy vấn dùng `sqlx::query!`/`query_as!` để SQL được kiểm tra với schema lúc build; `.sqlx/` (cache truy vấn) được commit để build Docker/CI không cần DB.
 - Migration là file SQL trong `migrations/`, chạy bằng `sqlx::migrate!()` khi app khởi động (sqlx tự giữ advisory lock); không cần service migrate riêng.
-- Thay vì: ORM (SeaORM, Diesel) → thêm một lớp phải học, che mất SQL; tầng repository như code cũ → thêm một tầng chỉ để chuyển tiếp; workspace nhiều crate → chưa có vấn đề thời gian build để giải quyết; nhiều service (microservices) → một người làm, chưa có người dùng, nên chi phí vận hành và gọi qua mạng lớn hơn lợi ích.
+- Thay vì: ORM (SeaORM, Diesel) → thêm một lớp phải học, che mất SQL; tầng repository như code cũ → thêm một tầng chỉ để chuyển tiếp; workspace nhiều crate → chưa có vấn đề thời gian build để giải quyết; một `types.rs` chung cho cả crate → type của mọi tính năng trộn vào một chỗ và phá ranh giới module; nhiều service (microservices) → một người làm, chưa có người dùng, nên chi phí vận hành và gọi qua mạng lớn hơn lợi ích.
 
 ### D3. Test backend chạy trên PostgreSQL thật
 - `#[sqlx::test]` tạo một database riêng cho mỗi test trên Postgres của Compose và chạy sẵn migration; test gọi thẳng `Router` bằng `tower::ServiceExt::oneshot`, không mở cổng HTTP.
 - Thời gian, gửi email và lưu file đi qua trait trong `AppState` (`Clock`, `Mailer`, `Storage`); test dùng bản giả (đồng hồ chỉnh được, mailer ghi vào bộ nhớ) để kiểm tra các mốc 60 giây / 15 phút / 30 phút / 30 ngày mà không phải chờ. Test tích hợp storage dùng RustFS thật.
 - Tên test chứa ID scenario (ví dụ `user_auth_s23_locks_on_fifth_failure`).
+- Test trong `tests/` được biên dịch thành crate riêng nên chỉ thấy item `pub`: chúng chỉ gọi qua HTTP (`build_router`). Logic nội bộ (quy tắc mật khẩu, chuẩn hóa, mã hóa) được test trong `#[cfg(test)] mod tests` ngay trong file, vì module con thấy được item private.
 - Frontend: Vitest cho logic thuần (validate mật khẩu, kiểm tra đích quay lại), Playwright cho luồng chính, đọc email qua API của Mailpit.
 
 ### D4. Mô hình dữ liệu
