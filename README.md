@@ -11,8 +11,7 @@ This repository coordinates the frontend and backend Git submodules and runs the
 │   ├── frontend/                 # Git submodule
 │   └── backend/                  # Git submodule
 ├── env/
-│   ├── frontend/.env.example
-│   └── backend/.env.example
+│   └── frontend/.env.example
 ├── compose.yaml                 # Local integration stack
 ├── nginx/                       # Local reverse proxy configuration
 ├── scripts/
@@ -30,7 +29,7 @@ Each submodule is pinned to a commit recorded by this repository. Updating a sub
 - Git access to both submodule repositories.
 - Docker Engine and Docker Compose v2 (OrbStack on macOS).
 - Local env files copied from `env/frontend/.env.example` and
-  `env/backend/.env.example`.
+  `apps/backend/docker/dev/.env.example`.
 
 ### New macOS machine
 
@@ -79,7 +78,9 @@ git commit -m "chore: update frontend"
 
 Repeat for `apps/backend`, or update both with `git submodule update --remote`. To see the pinned commits, run `git submodule status`.
 
-The root integration stack runs the development environment from each submodule, using `docker/dev/Dockerfile`. The Dockerfile path is relative to that service's build context. This stack does not use the submodules' production Dockerfiles or their standalone Compose files. It also starts PostgreSQL 18 and Mailpit for the backend, applies Alembic migrations before the API starts, and exposes the local Mailpit inbox at <http://localhost:8025>. PostgreSQL data persists in the `backend_postgres18_data` volume; `./scripts/dev.sh down` keeps this volume.
+Each submodule is an independent product with its own `docker/dev` and `docker/prod` setup, and deploys on its own. This root stack is only for local development across repos. It reuses the backend's dev stack directly: `compose.yaml` pulls in `apps/backend/docker/dev/compose.yaml` with `include`, so the `backend` and `backend-db` services, their Dockerfile and their env file are defined once, in the backend repo. The frontend keeps its own service definition here until it is rebuilt. The root stack adds Mailpit (inbox at <http://localhost:8025>), RustFS and Nginx.
+
+The backend container watches `src/`, `migrations/`, `Cargo.toml` and `Cargo.lock` with `watchexec` and recompiles and restarts the API on save. Migrations run when the API starts. PostgreSQL data persists in the `backend_postgres18_data` volume; `./scripts/dev.sh down` keeps this volume.
 
 ## Build and run locally
 
@@ -126,31 +127,7 @@ That ensures:
 
 Verify without changing the file with `./scripts/setup-hosts.sh check`.
 
-Trip cover uploads use a **private** S3-compatible store. The local stack runs
-**RustFS** (`backend-rustfs` on ports `9000`/`9001`). Browsers never read the
-bucket anonymously; covers are streamed through the API
-(`/api/v1/trips/{id}/cover`) and the Next.js proxy (`/api/trips/{id}/cover`)
-after visibility and membership checks. Point the same `S3_*` keys in
-`env/backend/.env` at Cloudflare R2 for production — keep the bucket private.
-`S3_PUBLIC_BASE_URL` is unused for browser access (deprecated; kept for Settings
-compatibility). If an older local bucket still has a public-read policy, remove
-it once so local matches private prod, for example:
-
-```sh
-docker compose exec backend python - <<'PY'
-import asyncio
-from app.core.storage import create_object_storage
-async def main():
-    s = create_object_storage()
-    async with s._client() as client:
-        try:
-            await client.delete_bucket_policy(Bucket=s._bucket)
-            print('deleted bucket policy')
-        except Exception as e:
-            print(type(e).__name__, e)
-asyncio.run(main())
-PY
-```
+The local stack runs **RustFS** (`backend-rustfs` on ports `9000`/`9001`) as the S3-compatible store, served at `http://media.dreamday.local`. The backend does not use it or Mailpit yet; their buckets and env keys arrive with the features that need them.
 
 Nginx listens on `127.0.0.1:80`, and PostgreSQL and Mailpit ports are also bound
 to loopback. The frontend and backend ports are published as `4000:4000` and
@@ -159,8 +136,8 @@ If port 80 is already in use, stop the service using it before starting this
 Compose stack.
 
 The standalone frontend dev stack uses host port `4000`. The standalone backend
-dev stack uses `8000`, `5432`, `1025`, and `8025`. Stop those stacks before
-starting the root stack to avoid port conflicts.
+dev stack uses `8000` and `5432`. Stop those stacks before starting the root
+stack to avoid port conflicts.
 
 To rebuild selected images and start those services on this machine:
 
@@ -177,40 +154,24 @@ images from a registry, or connect to a VPS. Stop the stack with
 
 ## Environment files
 
-| Service | Env file | Compose file |
+| Service | Env file | Defined in |
 | --- | --- | --- |
 | Frontend | `env/frontend/.env` | `compose.yaml` |
-| Backend | `env/backend/.env` | `compose.yaml` |
+| Backend, backend-db | `apps/backend/docker/dev/.env` | `apps/backend/docker/dev/compose.yaml` |
 
-Create the root-level local files from their examples before starting the root
-Compose stack. The frontend template groups public application metadata, runtime
-behavior, and development settings. The backend template groups
-application, database, authentication, email verification, and SMTP settings.
-Keep local `.env` files out of Git. In `env/backend/.env`, set the database
-credentials and generate a `JWT_SECRET_KEY` with at least 32 characters. The
-example points `EMAIL_VERIFICATION_URL` at the frontend's local English
-confirmation route (`/en/auth/confirm`) and `PASSWORD_RESET_URL` at
-`/en/auth/reset-password`; adjust them if those routes change. The
-backend connects to PostgreSQL and Mailpit using the Compose service names
-`backend-db` and `backend-mailpit`.
-
-These root-level env files are for the root integration stack. The standalone
-Compose stacks inside the submodules load `apps/frontend/.env` or
-`apps/backend/.env`; follow the corresponding app README to create those files.
+The backend uses the same env file whether its dev stack runs on its own or through this root stack; see `apps/backend/docker/README.md` for its keys. `DATABASE_URL` there points at `backend-db`, the Compose service name.
 
 ```sh
 cp env/frontend/.env.example env/frontend/.env
-cp env/backend/.env.example env/backend/.env
+cp apps/backend/docker/dev/.env.example apps/backend/docker/dev/.env
 ```
 
-Compose currently loads each application service's variables with `env_file`;
-keep these files and their examples in sync when configuration keys change.
+Keep local `.env` files out of Git, and keep them in sync with their examples when configuration keys change.
 
 ## Troubleshooting
 
 - **Submodule directory is empty:** run `git submodule update --init --recursive` and confirm Git can access both repositories.
-- **Compose reports a missing env file:** copy the matching `.env.example` to `.env` under the `env` directory.
+- **Compose reports a missing env file:** copy the matching `.env.example` to `.env` (see the table above).
 - **Compose cannot find a Dockerfile:** check the Dockerfile path inside the submodule and update the service's `dockerfile:` setting.
-- **Backend waits for migrations or fails its health check:** check the database credentials and `DB_HOST` in `env/backend/.env`, then inspect the `backend-db`, `backend-migrate`, and `backend` logs.
-- **Anonymous cover URL returns 403 from RustFS:** expected — the bucket is private. Use `/api/trips/{id}/cover` (or the API cover route) after authz. Remove any leftover public bucket policy with the one-off snippet above.
+- **Backend exits with `password authentication failed`:** the `backend_postgres18_data` volume keeps the password it was first created with. Use that password in `apps/backend/docker/dev/.env`, or drop the volume with `docker compose down -v` to start with an empty database. Inspect the `backend-db` and `backend` logs.
 - **A service cannot reach the other:** use its Compose service name and the port the application listens on inside the container; host `localhost` addresses are for clients outside the Docker network.
