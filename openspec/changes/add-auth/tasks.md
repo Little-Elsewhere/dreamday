@@ -23,7 +23,7 @@ Quy ước: task "test đỏ" chỉ viết test (phải chạy và FAIL vì chư
 
 ## 4. `user-auth` — backend
 
-- [ ] 4.1 Migration SQL cho `users`, `sessions`, `email_tokens`, `login_throttles` (D4), kèm `build.rs` để Cargo biên dịch lại khi `migrations/` thay đổi; kiểm tra: `#[sqlx::test]` xác nhận DB chặn trùng `email_hmac` và `token_hash`
+- [x] 4.1 Migration SQL cho `users`, `sessions`, `email_tokens`, `login_throttles` (D4), kèm `build.rs` để Cargo biên dịch lại khi `migrations/` thay đổi; kiểm tra: `#[sqlx::test]` xác nhận DB chặn trùng `email_hmac` và `token_hash`
 - [ ] 4.2 Test đỏ đăng ký và kiểm tra dữ liệu: USER-AUTH-S1, S3–S12, S45, S46 (gồm mã hóa email và tên hiển thị theo D15, chuẩn hóa NFC theo D6, mã lỗi theo D14, email theo ngôn ngữ)
 - [ ] 4.3 Cài đặt đăng ký: module `auth/` theo D2 (file con private, `mod.rs` re-export), struct của các bảng auth trong `auth/model.rs`, request/response trong `auth/dto.rs`; quy tắc mật khẩu, trait `Mailer` (bản `lettre` và bản giả cho test), gửi email bằng `tokio::spawn` (D7, D8) với mẫu `askama` `vi`/`en`; kiểm tra: test của 4.2 xanh
 - [ ] 4.4 Test đỏ xác thực email và gửi lại: USER-AUTH-S13–S19 (dùng `clock` cho 15 phút và 60 giây)
