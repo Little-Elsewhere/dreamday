@@ -25,7 +25,7 @@ Job chạy `npx @commitlint/cli` với `--extends @commitlint/config-conventiona
 Ngưỡng 2% như code cũ. Bỏ qua `tests/`, `migrations/`, `target/`, lockfile và `.github/`: test theo scenario cố ý lặp cấu trúc, còn migration và lockfile không phải code viết tay. Backend chạy `npx jscpd@<phiên bản cố định>` với `.jscpd.json` ở gốc repo; frontend thêm `jscpd` vào devDependencies.
 
 ### D5. Required checks
-Job chỉ chặn merge khi được đặt là required check trong ruleset của `develop`. Workflow auto-merge của repo gốc dùng `gh pr merge --auto`, vốn chờ các required check.
+Job chỉ chặn merge khi được đặt là required check trong ruleset của `develop`.
 
 ### D6. Clippy cấm `Utc::now` ngoài `SystemClock`
 `clippy.toml` khai báo `disallowed-methods` cho `chrono::Utc::now` với reason ngắn bằng tiếng Anh. Chỉ `SystemClock::now` và test của nó được phép gọi, bằng `#[expect(clippy::disallowed_methods)]` (báo lỗi nếu lint không còn xảy ra, nên không sót ngoại lệ thừa). Lý do: test dùng `FakeClock` để kiểm tra các mốc thời gian (D3 của `add-auth`); một lần gọi `Utc::now` trực tiếp làm các test đó sai mà không báo lỗi. Job `lint` hiện có (`cargo clippy -D warnings`) đọc file này nên không cần job mới.
