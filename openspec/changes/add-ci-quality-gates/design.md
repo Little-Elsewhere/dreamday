@@ -2,7 +2,7 @@
 
 ## Context
 
-- Code cũ: backend Python dùng `commitizen`, `jscpd`, `import-linter`, `detect-secrets` (CI và pre-commit); frontend dùng `commitlint` + husky, `jscpd`, `semgrep` với luật tự viết.
+- Code cũ: backend Python dùng `commitizen`, `jscpd`, `import-linter`, `detect-secrets` (CI và pre-commit); frontend dùng `commitlint` + husky, `jscpd`, `semgrep` với luật tự viết. Kiểm tra kiến trúc không được đưa lại (xem Out of scope trong `proposal.md`).
 - Bản dựng lại: backend Rust có CI `format`, `lint`, `test`; frontend sẽ dựng lại ở `add-auth` nhóm 2; repo gốc chỉ có workflow auto-merge.
 - Cả ba repo public, thuộc organization `Little-Elsewhere`.
 
@@ -24,15 +24,14 @@ Job chạy `npx @commitlint/cli` với `--extends @commitlint/config-conventiona
 ### D4. `jscpd` bỏ qua test và file sinh tự động
 Ngưỡng 2% như code cũ. Bỏ qua `tests/`, `migrations/`, `target/`, lockfile và `.github/`: test theo scenario cố ý lặp cấu trúc, còn migration và lockfile không phải code viết tay. Backend chạy `npx jscpd@<phiên bản cố định>` với `.jscpd.json` ở gốc repo; frontend thêm `jscpd` vào devDependencies.
 
-### D5. Kiến trúc backend bằng một bước `grep`
-Ranh giới giữa các module tính năng đã do compiler kiểm tra (file con private, `mod.rs` re-export, D2 của `add-auth`). Luật còn lại là `src/shared/` không phụ thuộc module tính năng: mọi đường dẫn `crate::` trong `src/shared/` phải bắt đầu bằng `crate::shared`. Job dùng `grep` để tìm vi phạm và fail nếu có.
-- Thay vì: công cụ phân tích phụ thuộc cho Rust (`cargo-modules`, …) → thêm công cụ cho đúng một luật.
-
-### D6. Required checks
+### D5. Required checks
 Job chỉ chặn merge khi được đặt là required check trong ruleset của `develop`. Workflow auto-merge của repo gốc dùng `gh pr merge --auto`, vốn chờ các required check.
+
+### D6. Clippy cấm `Utc::now` ngoài `SystemClock`
+`clippy.toml` khai báo `disallowed-methods` cho `chrono::Utc::now` với reason ngắn bằng tiếng Anh. Chỉ `SystemClock::now` và test của nó được phép gọi, bằng `#[expect(clippy::disallowed_methods)]` (báo lỗi nếu lint không còn xảy ra, nên không sót ngoại lệ thừa). Lý do: test dùng `FakeClock` để kiểm tra các mốc thời gian (D3 của `add-auth`); một lần gọi `Utc::now` trực tiếp làm các test đó sai mà không báo lỗi. Job `lint` hiện có (`cargo clippy -D warnings`) đọc file này nên không cần job mới.
+- Thay vì: luật kiến trúc theo module → Clippy chỉ cấm trên toàn crate, không giới hạn theo module.
 
 ## Risks / Trade-offs
 
 - [`gitleaks` báo nhầm dữ liệu test] → Ghi fingerprint vào `.gitleaksignore`, kèm lý do trong commit message.
 - [`jscpd` báo lặp ở code ngắn giống nhau có chủ đích] → Điều chỉnh `minTokens` hoặc `ignore` trong `.jscpd.json` thay vì hạ ngưỡng chung.
-- [Bước `grep` bỏ sót cách viết khác như `super::super::`] → Chấp nhận; review vẫn là lớp kiểm tra thứ hai.
