@@ -5,14 +5,14 @@ Quy ước: mỗi task là một PR (< ~400 dòng thay đổi). "Kiểm tra" c�
 ## 1. Cài đặt GitHub và quét lịch sử
 
 - [x] 1.1 Bật secret scanning và push protection cho `dreamday`, `dreamday-backend`, `dreamday-frontend`; kiểm tra: `gh api repos/Little-Elsewhere/<repo> --jq .security_and_analysis` báo `enabled` cho cả hai mục ở cả ba repo
-- [ ] 1.2 Chạy `gitleaks git` trên toàn bộ lịch sử của ba repo; với mỗi phát hiện: secret thật thì xoay khóa và ghi lại, dữ liệu test thì thêm vào `.gitleaksignore` (D2); kiểm tra: chạy lại không còn phát hiện chưa xử lý
+- [x] 1.2 Chạy `gitleaks git` trên toàn bộ lịch sử của ba repo; với mỗi phát hiện: secret thật thì xoay khóa và ghi lại, dữ liệu test thì thêm vào `.gitleaksignore` (D2); kiểm tra: chạy lại không còn phát hiện chưa xử lý
 
 ## 2. Backend (`apps/backend`)
 
-- [ ] 2.1 Job `secrets` chạy `gitleaks git` trên commit của PR (D2); kiểm tra: PR thử thêm `DATA_ENCRYPTION_KEY=` kèm một khóa base64 ngẫu nhiên vào `.env.example` thì job fail, bỏ đi thì pass
-- [ ] 2.2 Job `commitlint` (D3); kiểm tra: PR thử có commit `update stuff` thì job fail, commit `docs: …` thì pass
-- [ ] 2.3 `.jscpd.json` và job `jscpd` (D4); kiểm tra: job pass trên `develop`, PR thử chép lại một hàm dài trong `src/` thì job fail
-- [ ] 2.4 `clippy.toml` cấm `chrono::Utc::now`, cho phép trong `SystemClock::now` và test của nó (D6); kiểm tra: gọi `Utc::now()` ở một file khác trong `src/` thì `cargo clippy -- -D warnings` fail
+- [x] 2.1 Job `secrets` chạy `gitleaks git` trên commit của PR (D2); kiểm tra: PR thử thêm `DATA_ENCRYPTION_KEY=` kèm một khóa base64 ngẫu nhiên vào `.env.example` thì job fail, bỏ đi thì pass
+- [x] 2.2 Job `commitlint` (D3); kiểm tra: PR thử có commit `update stuff` thì job fail, commit `docs: …` thì pass
+- [x] 2.3 `.jscpd.json` và job `jscpd` (D4); kiểm tra: job pass trên `develop`, PR thử chép lại một hàm dài trong `src/` thì job fail
+- [x] 2.4 `clippy.toml` cấm `chrono::Utc::now`, cho phép trong `SystemClock::now` và test của nó (D6); kiểm tra: gọi `Utc::now()` ở một file khác trong `src/` thì `cargo clippy -- -D warnings` fail
 - [ ] 2.5 Đặt `secrets`, `commitlint`, `jscpd` (cùng `format`, `lint`, `test` hiện có) thành required check của `develop` (D5); kiểm tra: PR có job đỏ không merge được
 
 ## 3. Repo gốc
